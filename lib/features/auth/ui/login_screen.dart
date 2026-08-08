@@ -2,54 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/auth_cubit.dart';
 import '../cubit/auth_state.dart';
-import '../ui/login_screen.dart';
+import 'register_screen.dart';
 import '../../home/ui/home_screen.dart';
 
-class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  String? _selectedClubId;
-  List<dynamic> _clubs = []; // API'den gelecek takımları burada tutacağız
-
-  @override
-  void initState() {
-    super.initState();
-    // Ekran açılır açılmaz Cubit'e "Takımları getir" emrini veriyoruz
-    context.read<AuthCubit>().fetchClubs();
-  }
-
   @override
   void dispose() {
-    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _onRegisterPressed() {
-    if (_formKey.currentState!.validate() && _selectedClubId != null) {
-      context.read<AuthCubit>().register(
-        _usernameController.text.trim(),
+  void _onLoginPressed() {
+    if (_formKey.currentState!.validate()) {
+      context.read<AuthCubit>().login(
         _emailController.text.trim(),
         _passwordController.text,
-        _selectedClubId!,
-      );
-    } else if (_selectedClubId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lütfen bir takım seçin!'),
-          backgroundColor: Colors.red,
-        ),
       );
     }
   }
@@ -57,15 +36,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Kahvehaneye Katıl'), centerTitle: true),
-      // BlocConsumer: Cubit'teki durum değişikliklerini hem dinler hem de ekranı çizer
+      appBar: AppBar(title: const Text('Kahvehaneye Giriş'), centerTitle: true),
       body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
-          if (state is AuthClubsLoaded) {
-            setState(() {
-              _clubs = state.clubs;
-            });
-          } else if (state is AuthError) {
+          if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -79,7 +53,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-
             // Kullanıcıyı Ana Sayfaya yönlendir ve geri tuşuna basıp tekrar login'e dönmesini engelle
             Navigator.pushAndRemoveUntil(
               context,
@@ -89,35 +62,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           }
         },
         builder: (context, state) {
-          // Yüklenme durumunda ekranda sadece dönen ikon göster
-          if (state is AuthLoading && _clubs.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          return SingleChildScrollView(
+          return Padding(
             padding: const EdgeInsets.all(24.0),
             child: Form(
               key: _formKey,
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(
-                    Icons.sports_soccer,
-                    size: 80,
-                    color: Colors.green,
-                  ),
+                  const Icon(Icons.login, size: 80, color: Colors.green),
                   const SizedBox(height: 32),
-
-                  TextFormField(
-                    controller: _usernameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Kullanıcı Adı',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        value!.isEmpty ? 'Boş bırakılamaz' : null,
-                  ),
-                  const SizedBox(height: 16),
 
                   TextFormField(
                     controller: _emailController,
@@ -139,25 +93,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       border: OutlineInputBorder(),
                     ),
                     obscureText: true,
-                    validator: (value) =>
-                        value!.length < 6 ? 'En az 6 karakter olmalı' : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: 'Gönül Verdiğin Takım',
-                      border: OutlineInputBorder(),
-                    ),
-                    initialValue: _selectedClubId,
-                    items: _clubs.map((club) {
-                      return DropdownMenuItem<String>(
-                        value: club['id'],
-                        child: Text(club['name']),
-                      );
-                    }).toList(),
-                    onChanged: (value) =>
-                        setState(() => _selectedClubId = value),
+                    validator: (value) => value!.length < 6
+                        ? 'Şifre en az 6 karakter olmalı'
+                        : null,
                   ),
                   const SizedBox(height: 32),
 
@@ -167,25 +105,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
                     ),
-                    onPressed: state is AuthLoading ? null : _onRegisterPressed,
+                    onPressed: state is AuthLoading ? null : _onLoginPressed,
                     child: state is AuthLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
-                            'Kayıt Ol',
+                            'Giriş Yap',
                             style: TextStyle(fontSize: 18),
                           ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Kayıt ekranına geçiş butonu
                   TextButton(
                     onPressed: () {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
+                          builder: (context) => const RegisterScreen(),
                         ),
                       );
                     },
-                    child: const Text('Zaten hesabın var mı? Giriş Yap'),
+                    child: const Text('Hesabın yok mu? Kayıt Ol'),
                   ),
                 ],
               ),

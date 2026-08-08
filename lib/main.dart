@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/cubit/auth_cubit.dart';
-import 'features/auth/ui/register_screen.dart';
+import 'features/auth/ui/login_screen.dart';
 
 void main() {
   runApp(const KaleArkasiApp());
@@ -29,7 +29,7 @@ class KaleArkasiApp extends StatelessWidget {
             useMaterial3: true,
           ),
           // Uygulama açılır açılmaz doğrudan Kayıt Ekranına gidecek
-          home: const RegisterScreen(),
+          home: const LoginScreen(),
         ),
       ),
     );

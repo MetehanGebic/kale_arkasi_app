@@ -5,7 +5,7 @@ class AuthRepository {
   final Dio _dio;
   // Android emülatörler localhost (127.0.0.1) yerine 10.0.2.2 kullanır.
   // Gerçek cihaz kullanıyorsan buraya bilgisayarının yerel IP adresini yazmalısın.
-  final String _baseUrl = 'http://10.0.2.2:3000/api/identity';
+  final String _baseUrl = 'http://192.168.1.37:3000/api/identity';
 
   AuthRepository() : _dio = Dio() {
     _dio.options.connectTimeout = const Duration(seconds: 10);
