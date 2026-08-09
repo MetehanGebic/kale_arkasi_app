@@ -1,5 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- BUG FIX: targetSdkVersion 28+ olduğu için Android varsayılan olarak
+         düz HTTP (cleartext) trafiğini TAMAMEN engeller — bu hem debug hem
+         release build'de geçerlidir, "debuggable" olması bunu etkilemez.
+         api_constants.dart'taki geliştirme adresi HTTPS değil
+         (http://192.168.1.37:3000), bu yüzden bu bayrak olmadan Android'de
+         de (iOS'taki ATS sorununun aynısı gibi) TÜM API istekleri
+         "CLEARTEXT communication not permitted" hatasıyla başarısız olurdu.
+         NOT: Bu sadece yerel geliştirme içindir. Canlıya çıkmadan önce
+         backend HTTPS'e taşınıp bu satır kaldırılmalı. -->
     <application
+        android:usesCleartextTraffic="true"
         android:label="kale_arkasi_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
@@ -31,6 +41,13 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
+    <!-- BUG FIX: INTERNET izni sadece debug/profile manifest'lerinde vardi
+         (Flutter bunlari hot-reload/DevTools için otomatik ekler), ana
+         manifest'te YOKTU. Bu, flutter run ile test ederken hiçbir sorun
+         yaratmaz ama bir RELEASE APK/AAB derlediginde (örn. flutter build apk release)
+         uygulamanin Dio/http ile attigi TÜM ag istekleri SecurityException ile 
+         basarisiz olurdu. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.

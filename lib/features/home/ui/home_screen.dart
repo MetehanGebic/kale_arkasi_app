@@ -11,97 +11,91 @@ import '../cubit/tasks_state.dart';
 import '../repository/economy_repository.dart';
 import '../repository/leaderboard_repository.dart';
 import '../repository/tasks_repository.dart';
+import '../../../core/network/socket_client.dart';
+
+// -- Renk Paleti (Turf Green & Tea Bronze) --
+const Color turfGreen = Color(0xFF1B5E20);
+const Color teaBronze = Color(0xFFD4AF37); // Gold/Bronze
+const Color darkSurface = Color(0xFF121212);
+const Color surfaceColor = Color(0xFFF5F5F5);
 
 class HomeScreen extends StatelessWidget {
-  // Token, login/register akışından ya da AuthWrapper'ın SharedPreferences'tan
-  // okuduğu kayıtlı oturumdan gelir.
   final String userToken;
-
   const HomeScreen({super.key, this.userToken = ''});
 
   @override
   Widget build(BuildContext context) {
-    // Sayfayı MultiBlocProvider ile sarıyoruz.
-    // Her iki cubit de oluşturulur oluşturulmaz sunucudan veri çekiyor;
-    // aksi halde ekran her açıldığında bakiye/görevler "işlem yapılana
-    // kadar" boş/0 görünüyordu.
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (context) {
-            final cubit = EconomyCubit(EconomyRepository());
-            cubit.fetchBalance(userToken);
-            return cubit;
-          },
-        ),
-        BlocProvider(
-          create: (context) {
-            final cubit = TasksCubit(TasksRepository(), userToken);
-            cubit.fetchTasks();
-            return cubit;
-          },
-        ),
-        BlocProvider(
-          create: (context) {
-            final cubit = LeaderboardCubit(LeaderboardRepository(), userToken);
-            cubit.fetchLeaderboard();
-            return cubit;
-          },
-        ),
+        BlocProvider(create: (context) => EconomyCubit(EconomyRepository())..fetchBalance(userToken)),
+        BlocProvider(create: (context) => TasksCubit(TasksRepository(), userToken)..fetchTasks()),
+        BlocProvider(create: (context) => LeaderboardCubit(LeaderboardRepository(), userToken)..fetchLeaderboard()),
       ],
       child: HomeView(userToken: userToken),
     );
   }
 }
 
-class HomeView extends StatelessWidget {
+class HomeView extends StatefulWidget {
   final String userToken;
-
   const HomeView({super.key, required this.userToken});
 
   @override
-  Widget build(BuildContext context) {
-    final String token = userToken;
+  State<HomeView> createState() => _HomeViewState();
+}
 
+class _HomeViewState extends State<HomeView> {
+  @override
+  void initState() {
+    super.initState();
+    // Socket.io Başlatma ve Dinleme
+    SocketClient().init();
+    SocketClient().onLeaderboardUpdated(() {
+      if (mounted) {
+        context.read<LeaderboardCubit>().fetchLeaderboard();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    SocketClient().dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: surfaceColor,
       appBar: AppBar(
+        backgroundColor: turfGreen,
+        elevation: 0,
         title: const Text(
           'Kale Arkası',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 1.2),
         ),
         centerTitle: false,
         actions: [
-          // Çay Bakiyesi Göstergesi - Artık Cubit'i dinliyor!
           BlocBuilder<EconomyCubit, EconomyState>(
             builder: (context, state) {
               final int currentBalance = state.balance;
-              // İleride Initial stateteyken de mevcut bakiyeyi API'den (örneğin getProfile) çekip göstereceğiz.
-
               return Container(
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                margin: const EdgeInsets.only(right: 8, top: 10, bottom: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade100,
+                  gradient: LinearGradient(colors: [teaBronze, Colors.orange.shade400]),
                   borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4, offset: const Offset(0, 2))
+                  ],
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.emoji_food_beverage,
-                      color: Colors.amber.shade800,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 4),
+                    const Icon(Icons.emoji_food_beverage, color: Colors.white, size: 18),
+                    const SizedBox(width: 6),
                     Text(
                       '$currentBalance',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Colors.amber.shade900,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                     ),
                   ],
                 ),
@@ -109,17 +103,11 @@ class HomeView extends StatelessWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white70),
             onPressed: () async {
-              // Token'ı cihazdan sil, yoksa AuthWrapper bir sonraki açılışta
-              // kullanıcıyı otomatik olarak tekrar içeri alır.
               await context.read<AuthRepository>().logout();
               if (!context.mounted) return;
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                (route) => false,
-              );
+              Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
             },
           ),
         ],
@@ -127,207 +115,154 @@ class HomeView extends StatelessWidget {
       body: BlocListener<TasksCubit, TasksState>(
         listener: (context, state) {
           if (state is TasksActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('🍵 ${state.message} (+${state.reward})'),
-                backgroundColor: Colors.green.shade700,
-              ),
-            );
-            // Görev tamamlanınca kazanılan çay AppBar'daki bakiyeye de
-            // yansısın diye EconomyCubit'i tazeliyoruz.
-            context.read<EconomyCubit>().fetchBalance(token);
+            _showModernSnackBar(context, '🍵 ${state.message} (+${state.reward})', turfGreen);
+            context.read<EconomyCubit>().fetchBalance(widget.userToken);
           } else if (state is TasksError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('⚠️ ${state.message}'),
-                backgroundColor: Colors.red.shade700,
-              ),
-            );
+            _showModernSnackBar(context, '⚠️ ${state.message}', Colors.red.shade700);
           }
         },
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildMatchHeader(context),
-              const SizedBox(height: 24),
-
-              const Text(
-                'Çay Ocağı (Görevler)',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 24),
+                    const Text('Günün Görevleri', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: turfGreen)),
+                    const SizedBox(height: 12),
+                    _buildTasksSection(context),
+                    const SizedBox(height: 32),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Kahvehanenin Ağaları', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: turfGreen)),
+                        Icon(Icons.live_tv, color: Colors.red, size: 20), // Real-time indikatörü
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildLeaderboardCard(context),
+                    const SizedBox(height: 100), // FAB boşluğu
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              _buildTasksSection(context),
-              const SizedBox(height: 24),
-
-              const Text(
-                'Kahvehanenin Ağaları',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              _buildLeaderboardCard(context),
-
-              const SizedBox(
-                height: 80,
-              ), // FAB butonunun altındaki kartları kapatmaması için boşluk
             ],
           ),
         ),
       ),
-      // FAB Butonu - Artık API'ye istek atıyor!
-      floatingActionButton: BlocConsumer<EconomyCubit, EconomyState>(
-        listener: (context, state) {
-          if (state is EconomySuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('🍵 ${state.message} (+${state.reward})'),
-                backgroundColor: Colors.green.shade700,
-              ),
-            );
-          } else if (state is EconomyError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('⚠️ ${state.message}'),
-                backgroundColor: Colors.red.shade700,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          final isLoading = state is EconomyLoading;
+      floatingActionButton: _buildFab(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
 
-          return FloatingActionButton.extended(
-            onPressed: isLoading
-                ? null
-                : () => context.read<EconomyCubit>().claimDailyTea(token),
-            backgroundColor: isLoading
-                ? Colors.grey
-                : Theme.of(context).colorScheme.primary,
-            foregroundColor: Colors.white,
-            icon: isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Icon(Icons.emoji_food_beverage),
-            label: const Text(
-              'Günlük Çayını Al',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          );
-        },
+  void _showModernSnackBar(BuildContext context, String text, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
 
-  // 1. Yaklaşan Maç Vitrini (Header)
-  // NOT: Şu an tamamen statik/mock veri gösteriyor (TS vs FB, "2 Gün 14 Saat").
-  // Gerçek maç verisini çekecek bir API endpoint'i (ve muhtemelen bir
-  // MatchCubit) henüz yok — bu bir sonraki geliştirme adımı olabilir.
+  Widget _buildFab() {
+    return BlocConsumer<EconomyCubit, EconomyState>(
+      listener: (context, state) {
+        if (state is EconomySuccess) {
+           _showModernSnackBar(context, '🍵 ${state.message} (+${state.reward})', turfGreen);
+        } else if (state is EconomyError) {
+           _showModernSnackBar(context, '⚠️ ${state.message}', Colors.red.shade700);
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is EconomyLoading;
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.elasticOut,
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: value,
+              child: FloatingActionButton.extended(
+                onPressed: isLoading ? null : () => context.read<EconomyCubit>().claimDailyTea(widget.userToken),
+                backgroundColor: isLoading ? Colors.grey : teaBronze,
+                foregroundColor: Colors.white,
+                elevation: 4,
+                icon: isLoading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Icon(Icons.local_cafe_rounded),
+                label: const Text('Günlük Çayını Al', style: TextStyle(fontWeight: FontWeight.w900)),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildMatchHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue.shade900, Colors.red.shade900],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+      decoration: const BoxDecoration(
+        color: turfGreen,
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+        image: DecorationImage(
+          image: AssetImage('assets/images/stadium_bg.jpg'), // İleride eklenebilir, sorun çıkarmaz
+          fit: BoxFit.cover,
+          opacity: 0.1,
+        )
       ),
-      child: const Column(
+      child: Column(
         children: [
-          Text(
-            'Sıradaki Maç',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)),
+            child: const Text('Sıradaki Maç', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'TS',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+              _buildTeamLogoPlaceholder('TS', Colors.blue.shade900),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text('VS', style: TextStyle(color: teaBronze, fontSize: 20, fontStyle: FontStyle.italic, fontWeight: FontWeight.w900)),
               ),
-              Text('VS', style: TextStyle(color: Colors.white54, fontSize: 16)),
-              Text(
-                'FB',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              _buildTeamLogoPlaceholder('FB', Colors.yellow.shade700),
             ],
           ),
-          SizedBox(height: 16),
-          Text(
-            'Kalan Süre: 2 Gün 14 Saat',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-          ),
+          const SizedBox(height: 20),
+          const Text('2 Gün 14 Saat Kaldı', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
         ],
       ),
     );
   }
 
-  // 2. Günlük Görevler Modülü — artık TasksCubit'ten gerçek veriyle besleniyor.
-  // Yükleniyor / hata / liste durumlarını ayrı ayrı ele alıyoruz.
+  Widget _buildTeamLogoPlaceholder(String text, Color color) {
+    return Container(
+      width: 60, height: 60,
+      decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 10, spreadRadius: 2)]),
+      alignment: Alignment.center,
+      child: Text(text, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.w900)),
+    );
+  }
+
   Widget _buildTasksSection(BuildContext context) {
     return BlocBuilder<TasksCubit, TasksState>(
       builder: (context, state) {
         if (state is TasksLoading || state is TasksInitial) {
-          return const Card(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          );
+          return const Center(child: CircularProgressIndicator(color: turfGreen));
         }
-
         if (state is TasksError) {
-          return Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Text(
-                    'Görevler yüklenemedi: ${state.message}',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () => context.read<TasksCubit>().fetchTasks(),
-                    child: const Text('Tekrar Dene'),
-                  ),
-                ],
-              ),
-            ),
-          );
+          return Text('Görevler yüklenemedi: ${state.message}', style: const TextStyle(color: Colors.red));
         }
 
-        // Bu noktada state TasksLoaded (ya da alt sınıfı TasksActionSuccess)
-        // veya TaskCompleting olabilir — ikisi de kendi listesini taşır ama
-        // birbirinin alt sınıfı değil, o yüzden ayrı ayrı ele alıyoruz.
         List<TaskItem> tasks;
         String? completingTaskId;
         if (state is TasksLoaded) {
@@ -339,160 +274,138 @@ class HomeView extends StatelessWidget {
           completingTaskId = completing.taskId;
         }
 
-        if (tasks.isEmpty) {
-          return const Card(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('Şu an aktif görev yok, daha sonra tekrar bak!'),
-            ),
-          );
-        }
+        if (tasks.isEmpty) return const Text('Görev bulunamadı.');
 
-        return Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              for (int i = 0; i < tasks.length; i++) ...[
-                if (i > 0) const Divider(height: 1),
-                _buildTaskTile(
-                  context,
-                  tasks[i],
-                  isCompleting: tasks[i].id == completingTaskId,
-                ),
-              ],
-            ],
-          ),
+        return Column(
+          children: tasks.asMap().entries.map((entry) {
+            final int index = entry.key;
+            final TaskItem task = entry.value;
+            final bool isCompleting = task.id == completingTaskId;
+
+            return TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: Duration(milliseconds: 300 + (index * 100)),
+              curve: Curves.easeOut,
+              builder: (context, value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: Transform.translate(
+                    offset: Offset(0, 20 * (1 - value)),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: task.completedToday ? Colors.green.shade100 : Colors.grey.shade200),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2))],
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: task.completedToday ? Colors.green.shade50 : turfGreen.withValues(alpha: 0.1), shape: BoxShape.circle),
+                          child: Icon(task.completedToday ? Icons.check_circle_rounded : Icons.star_rounded, color: task.completedToday ? turfGreen : teaBronze),
+                        ),
+                        title: Text(task.title, style: TextStyle(fontWeight: FontWeight.bold, color: task.completedToday ? Colors.grey : Colors.black87)),
+                        trailing: isCompleting
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: turfGreen, strokeWidth: 2))
+                            : Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(color: task.completedToday ? Colors.grey.shade100 : teaBronze.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                                child: Text('+${task.rewardTea}', style: TextStyle(color: task.completedToday ? Colors.grey : teaBronze, fontWeight: FontWeight.w900)),
+                              ),
+                        onTap: (task.completedToday || isCompleting) ? null : () => context.read<TasksCubit>().completeTask(task.id),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          }).toList(),
         );
       },
     );
   }
 
-  Widget _buildTaskTile(
-    BuildContext context,
-    TaskItem task, {
-    required bool isCompleting,
-  }) {
-    return ListTile(
-      leading: Icon(
-        task.completedToday ? Icons.check_circle : Icons.radio_button_unchecked,
-        color: task.completedToday ? Colors.green : Colors.blue,
-      ),
-      title: Text(task.title),
-      subtitle: task.description != null ? Text(task.description!) : null,
-      trailing: isCompleting
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Text(
-              '+${task.rewardTea} Çay',
-              style: TextStyle(
-                color: task.completedToday ? Colors.grey : Colors.green,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-      onTap: (task.completedToday || isCompleting)
-          ? null
-          : () => context.read<TasksCubit>().completeTask(task.id),
-    );
-  }
-
-  // 3. Liderlik Tablosu Modülü — artık LeaderboardCubit'ten (GET
-  // /api/economy/leaderboard) gerçek veriyle besleniyor.
   Widget _buildLeaderboardCard(BuildContext context) {
     return BlocBuilder<LeaderboardCubit, LeaderboardState>(
       builder: (context, state) {
         if (state is LeaderboardLoading || state is LeaderboardInitial) {
-          return const Card(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          );
+          return const Center(child: CircularProgressIndicator(color: turfGreen));
         }
-
         if (state is LeaderboardError) {
-          return Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Text(
-                    'Liderlik tablosu yüklenemedi: ${state.message}',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () =>
-                        context.read<LeaderboardCubit>().fetchLeaderboard(),
-                    child: const Text('Tekrar Dene'),
-                  ),
-                ],
-              ),
-            ),
-          );
+          return Text('Liderlik tablosu yüklenemedi: ${state.message}', style: const TextStyle(color: Colors.red));
         }
-
         final entries = (state as LeaderboardLoaded).entries;
+        if (entries.isEmpty) return const Text('Kimse yok.');
 
-        if (entries.isEmpty) {
-          return const Card(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('Henüz kimse çay biriktirmemiş, ilk sen ol!'),
-            ),
-          );
-        }
+        return Column(
+          children: entries.asMap().entries.map((e) {
+            final index = e.key;
+            final entry = e.value;
+            
+            final Color primary = _parseHexColor(entry.clubPrimaryColorHex) ?? turfGreen;
+            final Color secondary = _parseHexColor(entry.clubSecondaryColorHex) ?? primary;
+            final bool isLight = primary.computeLuminance() > 0.55;
+            final Color textColor = isLight ? Colors.black87 : Colors.white;
 
-        return Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              for (int i = 0; i < entries.length; i++) ...[
-                if (i > 0) const Divider(height: 1),
-                _buildLeaderboardTile(entries[i]),
-              ],
-            ],
-          ),
+            return TweenAnimationBuilder<double>(
+              key: ValueKey('${entry.username}_${entry.teaBalance}'), // Bakiye değiştiğinde animasyon baştan oynar
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: Duration(milliseconds: 300 + (index * 100)),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: Transform.translate(
+                    offset: Offset(20 * (1 - value), 0),
+                    child: child,
+                  ),
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [primary, secondary]),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(color: primary.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 3))],
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: Text('${entry.rank}', style: TextStyle(color: primary, fontWeight: FontWeight.w900)),
+                  ),
+                  title: Text(entry.username, style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 16)),
+                  subtitle: entry.clubName != null ? Text(entry.clubName!, style: TextStyle(color: textColor.withValues(alpha: 0.8), fontSize: 12)) : null,
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('${entry.teaBalance}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.emoji_food_beverage, color: teaBronze, size: 16)
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         );
       },
     );
   }
 
-  Widget _buildLeaderboardTile(LeaderboardEntry entry) {
-    // İlk üç sıraya altın/gümüş/bronz, gerisine nötr gri.
-    final Color badgeColor = switch (entry.rank) {
-      1 => Colors.amber,
-      2 => Colors.grey.shade400,
-      3 => Colors.brown.shade300,
-      _ => Colors.blueGrey.shade200,
-    };
-
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: badgeColor,
-        child: Text(
-          '${entry.rank}',
-          style: const TextStyle(color: Colors.white),
-        ),
-      ),
-      title: Text(entry.username),
-      subtitle: entry.clubName != null ? Text(entry.clubName!) : null,
-      trailing: Text(
-        '${entry.teaBalance} Çay',
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-    );
+  Color? _parseHexColor(String? hex) {
+    if (hex == null || hex.isEmpty) return null;
+    var value = hex.replaceAll('#', '');
+    if (value.length == 6) value = 'FF$value';
+    if (value.length != 8) return null;
+    final intVal = int.tryParse(value, radix: 16);
+    if (intVal == null) return null;
+    return Color(intVal);
   }
 }

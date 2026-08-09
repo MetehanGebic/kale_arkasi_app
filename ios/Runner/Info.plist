@@ -26,6 +26,21 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- BUG FIX: iOS'un App Transport Security (ATS) özelliği, varsayılan
+	     olarak düz HTTP (şifresiz) bağlantıları tamamen engeller. api_constants.dart
+	     içindeki geliştirme adresi (http://192.168.1.37:3000) HTTPS değil, bu yüzden
+	     bu istisna olmadan iOS'ta (simülatörde bile) TÜM API istekleri
+	     "The resource could not be loaded because the App Transport Security
+	     policy requires the use of a secure connection" hatasıyla anında
+	     başarısız olurdu.
+	     NOT: Bu sadece yerel geliştirme içindir. Canlıya (App Store) çıkmadan
+	     önce backend HTTPS'e taşınıp bu istisna kaldırılmalı — aksi halde
+	     Apple inceleme sırasında bunu sorgulayabilir. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -6,14 +6,20 @@ class LeaderboardEntry {
   final String username;
   final int teaBalance;
   final String? clubName;
+  final String? clubSlug;
+  final String? clubLogoUrl;
   final String? clubPrimaryColorHex;
+  final String? clubSecondaryColorHex;
 
   const LeaderboardEntry({
     required this.rank,
     required this.username,
     required this.teaBalance,
     this.clubName,
+    this.clubSlug,
+    this.clubLogoUrl,
     this.clubPrimaryColorHex,
+    this.clubSecondaryColorHex,
   });
 
   factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
@@ -23,7 +29,10 @@ class LeaderboardEntry {
       username: json['username'] as String,
       teaBalance: json['teaBalance'] as int,
       clubName: club?['name'] as String?,
+      clubSlug: club?['slug'] as String?,
+      clubLogoUrl: club?['logoUrl'] as String?,
       clubPrimaryColorHex: club?['primaryColor'] as String?,
+      clubSecondaryColorHex: club?['secondaryColor'] as String?,
     );
   }
 }
