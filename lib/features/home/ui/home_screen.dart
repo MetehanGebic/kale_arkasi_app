@@ -4,9 +4,12 @@ import '../../auth/data/auth_repository.dart';
 import '../../auth/ui/login_screen.dart';
 import '../cubit/economy_cubit.dart';
 import '../cubit/economy_state.dart';
+import '../cubit/leaderboard_cubit.dart';
+import '../cubit/leaderboard_state.dart';
 import '../cubit/tasks_cubit.dart';
 import '../cubit/tasks_state.dart';
 import '../repository/economy_repository.dart';
+import '../repository/leaderboard_repository.dart';
 import '../repository/tasks_repository.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -35,6 +38,13 @@ class HomeScreen extends StatelessWidget {
           create: (context) {
             final cubit = TasksCubit(TasksRepository(), userToken);
             cubit.fetchTasks();
+            return cubit;
+          },
+        ),
+        BlocProvider(
+          create: (context) {
+            final cubit = LeaderboardCubit(LeaderboardRepository(), userToken);
+            cubit.fetchLeaderboard();
             return cubit;
           },
         ),
@@ -391,42 +401,97 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // 3. Liderlik Tablosu Modülü
-  // NOT: Bu da mock veri — gerçek liderlik tablosu için sunucudan
-  // (teaBalance'a göre sıralanmış) kullanıcı listesi çeken bir
-  // GET /api/economy/leaderboard gibi bir endpoint gerekecek.
+  // 3. Liderlik Tablosu Modülü — artık LeaderboardCubit'ten (GET
+  // /api/economy/leaderboard) gerçek veriyle besleniyor.
   Widget _buildLeaderboardCard(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        children: [
-          ListTile(
-            leading: const CircleAvatar(
-              backgroundColor: Colors.amber,
-              child: Text('1', style: TextStyle(color: Colors.white)),
+    return BlocBuilder<LeaderboardCubit, LeaderboardState>(
+      builder: (context, state) {
+        if (state is LeaderboardLoading || state is LeaderboardInitial) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Center(child: CircularProgressIndicator()),
             ),
-            title: const Text('BordoMavi61'),
-            subtitle: const Text('Tribün Lideri'),
-            trailing: const Text(
-              '1450 Çay',
-              style: TextStyle(fontWeight: FontWeight.bold),
+          );
+        }
+
+        if (state is LeaderboardError) {
+          return Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Text(
+                    'Liderlik tablosu yüklenemedi: ${state.message}',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () =>
+                        context.read<LeaderboardCubit>().fetchLeaderboard(),
+                    child: const Text('Tekrar Dene'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final entries = (state as LeaderboardLoaded).entries;
+
+        if (entries.isEmpty) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('Henüz kimse çay biriktirmemiş, ilk sen ol!'),
+            ),
+          );
+        }
+
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          const Divider(height: 1),
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.grey.shade400,
-              child: const Text('2', style: TextStyle(color: Colors.white)),
-            ),
-            title: const Text('Firtina'),
-            subtitle: const Text('Ateşli Taraftar'),
-            trailing: const Text(
-              '1200 Çay',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+          child: Column(
+            children: [
+              for (int i = 0; i < entries.length; i++) ...[
+                if (i > 0) const Divider(height: 1),
+                _buildLeaderboardTile(entries[i]),
+              ],
+            ],
           ),
-        ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLeaderboardTile(LeaderboardEntry entry) {
+    // İlk üç sıraya altın/gümüş/bronz, gerisine nötr gri.
+    final Color badgeColor = switch (entry.rank) {
+      1 => Colors.amber,
+      2 => Colors.grey.shade400,
+      3 => Colors.brown.shade300,
+      _ => Colors.blueGrey.shade200,
+    };
+
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: badgeColor,
+        child: Text(
+          '${entry.rank}',
+          style: const TextStyle(color: Colors.white),
+        ),
+      ),
+      title: Text(entry.username),
+      subtitle: entry.clubName != null ? Text(entry.clubName!) : null,
+      trailing: Text(
+        '${entry.teaBalance} Çay',
+        style: const TextStyle(fontWeight: FontWeight.bold),
       ),
     );
   }
