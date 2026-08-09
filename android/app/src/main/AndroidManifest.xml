@@ -10,7 +10,7 @@
          backend HTTPS'e taşınıp bu satır kaldırılmalı. -->
     <application
         android:usesCleartextTraffic="true"
-        android:label="kale_arkasi_app"
+        android:label="Skorla!"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

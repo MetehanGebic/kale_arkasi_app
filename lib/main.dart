@@ -20,7 +20,7 @@ class KaleArkasiApp extends StatelessWidget {
       child: BlocProvider(
         create: (context) => AuthCubit(context.read<AuthRepository>()),
         child: MaterialApp(
-          title: 'Kale Arkası',
+          title: 'Skorla!',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(

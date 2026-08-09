@@ -51,4 +51,15 @@ class AuthCubit extends Cubit<AuthState> {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
     }
   }
+
+  // Şifremi unuttum işlemi
+  Future<void> forgotPassword(String email) async {
+    emit(AuthLoading());
+    try {
+      final message = await _repository.forgotPassword(email);
+      emit(AuthForgotPasswordSuccess(message));
+    } catch (e) {
+      emit(AuthError(e.toString().replaceAll('Exception: ', '')));
+    }
+  }
 }

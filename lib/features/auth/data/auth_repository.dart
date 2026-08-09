@@ -51,7 +51,6 @@ class AuthRepository {
           'favoriteClubId': favoriteClubId,
         },
       );
-
       if (response.statusCode == 201) {
         final token = response.data['data']['token'];
         final Map<String, dynamic> user = response.data['data']['user'];
@@ -92,6 +91,24 @@ class AuthRepository {
         return user;
       }
       throw Exception(response.data['message'] ?? 'Giriş başarısız.');
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data?['message'] ?? 'Sunucu ile iletişim kurulamadı.',
+      );
+    }
+  }
+
+  // Şifremi Unuttum
+  Future<String> forgotPassword(String email) async {
+    try {
+      final response = await _dio.post(
+        '$_baseUrl/forgot-password',
+        data: {'email': email},
+      );
+      if (response.statusCode == 200) {
+        return response.data['message'] ?? 'E-posta gönderildi.';
+      }
+      throw Exception('İşlem başarısız.');
     } on DioException catch (e) {
       throw Exception(
         e.response?.data?['message'] ?? 'Sunucu ile iletişim kurulamadı.',
