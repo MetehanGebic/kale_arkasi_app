@@ -1,13 +1,15 @@
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/api_constants.dart';
+import '../../../core/token_storage.dart';
 
 class AuthRepository {
   final Dio _dio;
-  // Android emülatörler localhost (127.0.0.1) yerine 10.0.2.2 kullanır.
-  // Gerçek cihaz kullanıyorsan buraya bilgisayarının yerel IP adresini yazmalısın.
-  final String _baseUrl = 'http://192.168.1.37:3000/api/identity';
+  final TokenStorage _tokenStorage;
+  final String _baseUrl = ApiConstants.identityUrl;
 
-  AuthRepository() : _dio = Dio() {
+  AuthRepository({TokenStorage? tokenStorage})
+    : _dio = Dio(),
+      _tokenStorage = tokenStorage ?? TokenStorage() {
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);
   }
@@ -19,9 +21,16 @@ class AuthRepository {
       if (response.statusCode == 200) {
         return response.data['data'];
       }
+      // Dio, 2xx dışı durum kodlarında zaten DioException fırlatır;
+      // buraya normalde düşülmez ama beklenmedik bir durum için yine de ele alıyoruz.
       throw Exception('Takımlar alınamadı.');
-    } catch (e) {
-      throw Exception('Bağlantı hatası: $e');
+    } on DioException catch (e) {
+      // Kendi attığımız Exception'ı burada YAKALAMIYORUZ (o zaten DioException değil),
+      // böylece "Bağlantı hatası: Exception: ..." gibi iç içe/çift mesaj oluşmuyor.
+      throw Exception(
+        e.response?.data?['message'] ??
+            'Bağlantı hatası: Sunucuya ulaşılamadı.',
+      );
     }
   }
 
@@ -44,13 +53,19 @@ class AuthRepository {
       );
 
       if (response.statusCode == 201) {
-        await _saveToken(response.data['data']['token']);
-        return response.data['data']['user'];
+        final token = response.data['data']['token'];
+        final Map<String, dynamic> user = response.data['data']['user'];
+
+        // Token'ı user map'inin içine dahil ediyoruz ki UI/Cubit erişebilsin
+        user['token'] = token;
+
+        await _tokenStorage.saveToken(token);
+        return user;
       }
       throw Exception(response.data['message'] ?? 'Kayıt başarısız.');
     } on DioException catch (e) {
       throw Exception(
-        e.response?.data['message'] ?? 'Sunucu ile iletişim kurulamadı.',
+        e.response?.data?['message'] ?? 'Sunucu ile iletişim kurulamadı.',
       );
     }
   }
@@ -67,20 +82,26 @@ class AuthRepository {
       );
 
       if (response.statusCode == 200) {
-        await _saveToken(response.data['data']['token']);
-        return response.data['data']['user'];
+        final token = response.data['data']['token'];
+        final Map<String, dynamic> user = response.data['data']['user'];
+
+        // Token'ı user map'inin içine dahil ediyoruz ki UI/Cubit erişebilsin
+        user['token'] = token;
+
+        await _tokenStorage.saveToken(token);
+        return user;
       }
       throw Exception(response.data['message'] ?? 'Giriş başarısız.');
     } on DioException catch (e) {
       throw Exception(
-        e.response?.data['message'] ?? 'Sunucu ile iletişim kurulamadı.',
+        e.response?.data?['message'] ?? 'Sunucu ile iletişim kurulamadı.',
       );
     }
   }
 
-  // Token'ı Cihaz Hafızasına (SharedPreferences) Kaydetme
-  Future<void> _saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('jwt_token', token);
-  }
+  /// Uygulama açılışında kayıtlı token var mı diye bakmak için.
+  Future<String?> getStoredToken() => _tokenStorage.getToken();
+
+  /// Çıkış yapıldığında token'ı cihazdan temizler.
+  Future<void> logout() => _tokenStorage.clearToken();
 }

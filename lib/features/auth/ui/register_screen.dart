@@ -73,6 +73,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             );
           } else if (state is AuthSuccess) {
+            // 1. Önce Node.js'ten (API) bize tam olarak ne geldiğini konsola yazdıralım ki görelim
+            print("🏟️ API'DEN GELEN VERİ: ${state.user}");
+
+            // 2. Token'ı kesin String olarak değil, 'dynamic' (veya nullable) olarak alalım
+            final token = state.user['token'];
+
+            // 3. Eğer token gerçekten gelmiyorsa (null ise), uygulamayı dondurmak yerine hata gösterelim
+            if (token == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Sistemsel Hata: Sunucudan dijital anahtar (token) gelmedi!',
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return; // Aşağıdaki yönlendirme (Navigator) kodlarının çalışmasını durdur
+            }
+
+            // 4. Token varsa her şey yolunda demektir, yönlendirmeyi yapabiliriz
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Giriş Başarılı!'),
@@ -80,10 +100,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             );
 
-            // Kullanıcıyı Ana Sayfaya yönlendir ve geri tuşuna basıp tekrar login'e dönmesini engelle
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
+              MaterialPageRoute(
+                builder: (context) => HomeScreen(userToken: token.toString()),
+              ),
               (Route<dynamic> route) => false,
             );
           }
@@ -92,6 +113,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
           // Yüklenme durumunda ekranda sadece dönen ikon göster
           if (state is AuthLoading && _clubs.isEmpty) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          // Takımlar hiç yüklenemediyse (örn. ağ hatası) kullanıcıyı
+          // boş bir dropdown'la sonsuza kadar bekletmek yerine tekrar
+          // deneme imkânı veriyoruz.
+          if (state is AuthError && _clubs.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.wifi_off, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Takımlar yüklenemedi: ${state.message}',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => context.read<AuthCubit>().fetchClubs(),
+                      child: const Text('Tekrar Dene'),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           return SingleChildScrollView(

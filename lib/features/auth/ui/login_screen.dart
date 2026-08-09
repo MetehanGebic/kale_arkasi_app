@@ -47,16 +47,38 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             );
           } else if (state is AuthSuccess) {
+            // 1. Önce Node.js'ten (API) bize tam olarak ne geldiğini konsola yazdıralım ki görelim
+            print("🏟️ API'DEN GELEN VERİ: ${state.user}");
+
+            // 2. Token'ı kesin String olarak değil, 'dynamic' (veya nullable) olarak alalım
+            final token = state.user['token'];
+
+            // 3. Eğer token gerçekten gelmiyorsa (null ise), uygulamayı dondurmak yerine hata gösterelim
+            if (token == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Sistemsel Hata: Sunucudan dijital anahtar (token) gelmedi!',
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return; // Aşağıdaki yönlendirme (Navigator) kodlarının çalışmasını durdur
+            }
+
+            // 4. Token varsa her şey yolunda demektir, yönlendirmeyi yapabiliriz
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Giriş Başarılı!'),
                 backgroundColor: Colors.green,
               ),
             );
-            // Kullanıcıyı Ana Sayfaya yönlendir ve geri tuşuna basıp tekrar login'e dönmesini engelle
+
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
+              MaterialPageRoute(
+                builder: (context) => HomeScreen(userToken: token.toString()),
+              ),
               (Route<dynamic> route) => false,
             );
           }

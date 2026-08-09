@@ -1,0 +1,52 @@
+import 'package:dio/dio.dart';
+import '../../../core/api_constants.dart';
+
+class EconomyRepository {
+  final Dio _dio;
+  final String baseUrl = ApiConstants.economyUrl;
+
+  EconomyRepository({Dio? dio}) : _dio = dio ?? Dio() {
+    _dio.options.connectTimeout = const Duration(seconds: 10);
+    _dio.options.receiveTimeout = const Duration(seconds: 10);
+  }
+
+  Future<Map<String, dynamic>> claimDailyTea(String token) async {
+    try {
+      final response = await _dio.post(
+        '$baseUrl/daily-tea',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      final data = response.data;
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data['data']; // { message, reward, newBalance }
+      }
+      throw Exception(data['message'] ?? 'Çay alınırken bir hata oluştu.');
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data?['message'] ?? 'Çay alınırken bir hata oluştu.',
+      );
+    }
+  }
+
+  // Uygulama açılışında (veya HomeScreen her göründüğünde) mevcut bakiyeyi
+  // sunucudan çekmek için. Bakiyeyi DEĞİŞTİRMEZ, sadece okur.
+  Future<int> getBalance(String token) async {
+    try {
+      final response = await _dio.get(
+        '$baseUrl/status',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      final data = response.data;
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data['data']['teaBalance'] as int;
+      }
+      throw Exception(data['message'] ?? 'Bakiye alınamadı.');
+    } on DioException catch (e) {
+      throw Exception(e.response?.data?['message'] ?? 'Bakiye alınamadı.');
+    }
+  }
+}
