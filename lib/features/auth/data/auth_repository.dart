@@ -116,6 +116,32 @@ class AuthRepository {
     }
   }
 
+  // Şifre Sıfırlama
+  Future<String> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '$_baseUrl/reset-password',
+        data: {
+          'email': email,
+          'code': code,
+          'password': newPassword,
+        },
+      );
+      if (response.statusCode == 200) {
+        return response.data['message'] ?? 'Şifre başarıyla güncellendi.';
+      }
+      throw Exception('İşlem başarısız.');
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data?['message'] ?? 'Sunucu ile iletişim kurulamadı.',
+      );
+    }
+  }
+
   /// Uygulama açılışında kayıtlı token var mı diye bakmak için.
   Future<String?> getStoredToken() => _tokenStorage.getToken();
 

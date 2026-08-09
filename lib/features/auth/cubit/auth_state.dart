@@ -42,7 +42,16 @@ class AuthError extends AuthState {
 
 class AuthForgotPasswordSuccess extends AuthState {
   final String message;
-  const AuthForgotPasswordSuccess(this.message);
+  final String email;
+  const AuthForgotPasswordSuccess(this.message, this.email);
+
+  @override
+  List<Object?> get props => [message, email];
+}
+
+class AuthResetPasswordSuccess extends AuthState {
+  final String message;
+  const AuthResetPasswordSuccess(this.message);
 
   @override
   List<Object?> get props => [message];

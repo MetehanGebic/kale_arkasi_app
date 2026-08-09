@@ -45,6 +45,9 @@ class _LoginScreenState extends State<LoginScreen> {
             _showSnackBar(context, state.message, Colors.red.shade700);
           } else if (state is AuthForgotPasswordSuccess) {
             _showSnackBar(context, state.message, turfGreen);
+            _showResetPasswordDialog(context, state.email);
+          } else if (state is AuthResetPasswordSuccess) {
+            _showSnackBar(context, state.message, turfGreen);
           } else if (state is AuthSuccess) {
             final token = state.user['token'];
             if (token == null) {
@@ -343,6 +346,62 @@ class _LoginScreenState extends State<LoginScreen> {
               foregroundColor: Colors.white,
             ),
             child: const Text('Gönder'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetPasswordDialog(BuildContext context, String email) {
+    final codeController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Şifremi Sıfırla', style: TextStyle(color: turfGreen, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('$email adresine gelen 6 haneli kodu ve yeni şifrenizi girin.', style: const TextStyle(fontSize: 14)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: codeController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                labelText: '6 Haneli Kod',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: newPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Yeni Şifre',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('İptal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (codeController.text.length == 6 && newPasswordController.text.length >= 6) {
+                Navigator.pop(ctx);
+                context.read<AuthCubit>().resetPassword(email, codeController.text.trim(), newPasswordController.text);
+              } else {
+                _showSnackBar(context, 'Lütfen 6 haneli kodu ve en az 6 karakterli yeni şifrenizi girin.', Colors.red.shade700);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: turfGreen, foregroundColor: Colors.white),
+            child: const Text('Şifreyi Güncelle'),
           ),
         ],
       ),
