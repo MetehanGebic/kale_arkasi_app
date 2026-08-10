@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../cubit/superlig_cubit.dart';
 import '../cubit/superlig_state.dart';
 import '../data/models/superlig_models.dart';
+import 'team_profile_screen.dart';
 
 const Color turfGreen = Color(0xFF1B5E20);
 const Color teaBronze = Color(0xFFD4AF37);
@@ -88,12 +89,14 @@ class _SuperligScreenState extends State<SuperligScreen>
           } else if (state is SuperligLoaded) {
             return TabBarView(
               controller: _tabController,
-                children: [
-                  KeepAlivePage(child: _buildStandingsTab(state.standings)),
-                  KeepAlivePage(child: _buildFixturesTab(state.fixtures)),
-                  KeepAlivePage(child: _buildTopScorersTab(state.topScorers)),
-                  KeepAlivePage(child: _buildTransfersTab(state.transfers, state.standings)),
-                ],
+              children: [
+                KeepAlivePage(child: _buildStandingsTab(state.standings)),
+                KeepAlivePage(child: _buildFixturesTab(state.fixtures)),
+                KeepAlivePage(child: _buildTopScorersTab(state.topScorers)),
+                KeepAlivePage(
+                  child: _buildTransfersTab(state.transfers, state.standings),
+                ),
+              ],
             );
           }
           return const SizedBox.shrink();
@@ -112,6 +115,7 @@ class _SuperligScreenState extends State<SuperligScreen>
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         child: DataTable(
+          showCheckboxColumn: false,
           horizontalMargin: 10,
           columnSpacing: 10,
           headingTextStyle: const TextStyle(
@@ -132,6 +136,14 @@ class _SuperligScreenState extends State<SuperligScreen>
           ],
           rows: standings.map((e) {
             return DataRow(
+              onSelectChanged: (_) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TeamProfileScreen(clubName: e.clubName),
+                  ),
+                );
+              },
               cells: [
                 DataCell(
                   Text(
@@ -209,7 +221,7 @@ class _SuperligScreenState extends State<SuperligScreen>
       byWeek[f.week]!.add(f);
     }
     final sortedWeeks = byWeek.keys.toList()..sort();
-    
+
     // Default to first week if none selected
     _selectedWeek ??= sortedWeeks.isNotEmpty ? sortedWeeks.first : 1;
     final currentWeek = _selectedWeek!;
@@ -292,83 +304,99 @@ class _SuperligScreenState extends State<SuperligScreen>
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Row(
+                flex: 3,
+                child: Column(
                   children: [
                     if (f.homeClubLogoUrl != null)
-                      Image.network(f.homeClubLogoUrl!, width: 24, height: 24)
+                      CachedNetworkImage(
+                        imageUrl: f.homeClubLogoUrl!,
+                        width: 32,
+                        height: 32,
+                        errorWidget: (c, u, e) => const Icon(Icons.shield, size: 32, color: Colors.grey),
+                      )
                     else if (f.homeClubSlug != null)
                       Image.asset(
                         'assets/images/clubs/${f.homeClubSlug}.png',
-                        width: 24,
-                        height: 24,
+                        width: 32,
+                        height: 32,
                         errorBuilder: (c, e, s) => const Icon(
                           Icons.shield,
-                          size: 24,
+                          size: 32,
                           color: Colors.grey,
                         ),
                       )
                     else
-                      const Icon(Icons.shield, size: 24, color: Colors.grey),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        f.homeClubName,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      const Icon(Icons.shield, size: 32, color: Colors.grey),
+                    const SizedBox(height: 6),
+                    Text(
+                      f.homeClubName,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: surfaceColor,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  (f.homeScore != null && f.awayScore != null)
-                      ? '${f.homeScore} - ${f.awayScore}'
-                      : 'v',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+              Expanded(
+                flex: 2,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      (f.homeScore != null && f.awayScore != null)
+                          ? '${f.homeScore} - ${f.awayScore}'
+                          : 'v',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                 ),
               ),
               Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                flex: 3,
+                child: Column(
                   children: [
-                    Expanded(
-                      child: Text(
-                        f.awayClubName,
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     if (f.awayClubLogoUrl != null)
-                      Image.network(f.awayClubLogoUrl!, width: 24, height: 24)
+                      CachedNetworkImage(
+                        imageUrl: f.awayClubLogoUrl!,
+                        width: 32,
+                        height: 32,
+                        errorWidget: (c, u, e) => const Icon(Icons.shield, size: 32, color: Colors.grey),
+                      )
                     else if (f.awayClubSlug != null)
                       Image.asset(
                         'assets/images/clubs/${f.awayClubSlug}.png',
-                        width: 24,
-                        height: 24,
+                        width: 32,
+                        height: 32,
                         errorBuilder: (c, e, s) => const Icon(
                           Icons.shield,
-                          size: 24,
+                          size: 32,
                           color: Colors.grey,
                         ),
                       )
                     else
-                      const Icon(Icons.shield, size: 24, color: Colors.grey),
+                      const Icon(Icons.shield, size: 32, color: Colors.grey),
+                    const SizedBox(height: 6),
+                    Text(
+                      f.awayClubName,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -425,7 +453,10 @@ class _SuperligScreenState extends State<SuperligScreen>
     );
   }
 
-  Widget _buildTransfersTab(List<Transfer> allTransfers, List<StandingsEntry> standings) {
+  Widget _buildTransfersTab(
+    List<Transfer> allTransfers,
+    List<StandingsEntry> standings,
+  ) {
     if (allTransfers.isEmpty) {
       return const Center(child: Text('Transfer geçmişi bulunamadı.'));
     }
@@ -433,10 +464,13 @@ class _SuperligScreenState extends State<SuperligScreen>
     // Filter logic
     List<Transfer> displayedTransfers = allTransfers;
     if (_selectedTransferClubName != null) {
-      displayedTransfers = allTransfers.where((t) => 
-        t.toClubName == _selectedTransferClubName || 
-        t.fromClubName == _selectedTransferClubName
-      ).toList();
+      displayedTransfers = allTransfers
+          .where(
+            (t) =>
+                t.toClubName == _selectedTransferClubName ||
+                t.fromClubName == _selectedTransferClubName,
+          )
+          .toList();
     } else {
       // Default: Top 50 transfers
       displayedTransfers = allTransfers.take(50).toList();
@@ -474,19 +508,27 @@ class _SuperligScreenState extends State<SuperligScreen>
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: isSelected ? teaBronze.withValues(alpha: 0.3) : Colors.transparent,
-                    border: isSelected ? Border.all(color: teaBronze, width: 2) : null,
+                    color: isSelected
+                        ? teaBronze.withValues(alpha: 0.3)
+                        : Colors.transparent,
+                    border: isSelected
+                        ? Border.all(color: teaBronze, width: 2)
+                        : null,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: s.clubLogoUrl != null
                       ? CachedNetworkImage(
                           imageUrl: s.clubLogoUrl!,
                           fit: BoxFit.contain,
-                          errorWidget: (c, u, e) => const Icon(Icons.shield, size: 20),
+                          errorWidget: (c, u, e) =>
+                              const Icon(Icons.shield, size: 20),
                         )
                       : s.clubSlug != null
-                          ? Image.asset('assets/images/clubs/${s.clubSlug}.png', fit: BoxFit.contain)
-                          : const Icon(Icons.shield, size: 20),
+                      ? Image.asset(
+                          'assets/images/clubs/${s.clubSlug}.png',
+                          fit: BoxFit.contain,
+                        )
+                      : const Icon(Icons.shield, size: 20),
                 ),
               );
             },
@@ -501,30 +543,88 @@ class _SuperligScreenState extends State<SuperligScreen>
             itemCount: displayedTransfers.length,
             itemBuilder: (context, index) {
               final t = displayedTransfers[index];
+
+              Color badgeBgColor = teaBronze.withValues(alpha: 0.2);
+              Color badgeTextColor = turfGreen;
+              if (_selectedTransferClubName != null) {
+                if (t.fromClubName == _selectedTransferClubName) {
+                  badgeBgColor = Colors.red.shade400;
+                  badgeTextColor = Colors.white;
+                } else if (t.toClubName == _selectedTransferClubName) {
+                  badgeBgColor = Colors.green.shade500;
+                  badgeTextColor = Colors.white;
+                }
+              }
+
               return Card(
                 elevation: 2,
                 margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Colors.grey.shade200,
-                    backgroundImage: t.playerPhotoUrl != null
-                        ? CachedNetworkImageProvider(t.playerPhotoUrl!)
-                        : null,
-                    child: t.playerPhotoUrl == null
-                        ? const Icon(Icons.person, color: Colors.grey)
-                        : null,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
                   ),
-                  title: Text(
-                    t.playerName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  leading: Container(
+                    width: 45,
+                    height: 45,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      shape: BoxShape.circle,
+                    ),
+                    child: t.playerPhotoUrl != null
+                        ? Padding(
+                            padding: const EdgeInsets.all(2.0),
+                            child: ClipOval(
+                              child: CachedNetworkImage(
+                                imageUrl: t.playerPhotoUrl!,
+                                fit: BoxFit
+                                    .contain, // Fotoğrafın tamamını sığdır
+                                errorWidget: (context, url, error) =>
+                                    const Icon(
+                                      Icons.person,
+                                      color: Colors.grey,
+                                    ),
+                              ),
+                            ),
+                          )
+                        : const Icon(Icons.person, color: Colors.grey),
+                  ),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          t.playerName,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeBgColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          t.feeType,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: badgeTextColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           if (t.fromClubLogoUrl != null)
@@ -532,61 +632,62 @@ class _SuperligScreenState extends State<SuperligScreen>
                               imageUrl: t.fromClubLogoUrl!,
                               width: 16,
                               height: 16,
-                              errorWidget: (c, u, e) => const Icon(Icons.shield, size: 16),
+                              errorWidget: (c, u, e) =>
+                                  const Icon(Icons.shield, size: 16),
                             )
                           else if (t.fromClubSlug != null)
-                            Image.asset('assets/images/clubs/${t.fromClubSlug}.png', width: 16, height: 16)
+                            Image.asset(
+                              'assets/images/clubs/${t.fromClubSlug}.png',
+                              width: 16,
+                              height: 16,
+                            )
                           else
                             const Icon(Icons.shield, size: 16),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               t.fromClubName,
-                              style: const TextStyle(fontSize: 12),
+                              style: const TextStyle(fontSize: 11),
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 4),
-                            child: Icon(Icons.arrow_forward_rounded, size: 12, color: Colors.grey),
+                            child: Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 12,
+                              color: Colors.grey,
+                            ),
                           ),
                           if (t.toClubLogoUrl != null)
                             CachedNetworkImage(
                               imageUrl: t.toClubLogoUrl!,
                               width: 16,
                               height: 16,
-                              errorWidget: (c, u, e) => const Icon(Icons.shield, size: 16),
+                              errorWidget: (c, u, e) =>
+                                  const Icon(Icons.shield, size: 16),
                             )
                           else if (t.toClubSlug != null)
-                            Image.asset('assets/images/clubs/${t.toClubSlug}.png', width: 16, height: 16)
+                            Image.asset(
+                              'assets/images/clubs/${t.toClubSlug}.png',
+                              width: 16,
+                              height: 16,
+                            )
                           else
                             const Icon(Icons.shield, size: 16),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               t.toClubName,
-                              style: const TextStyle(fontSize: 12),
+                              style: const TextStyle(fontSize: 11),
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                     ],
-                  ),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: teaBronze.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      t.feeType,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: turfGreen,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ),
                 ),
               );

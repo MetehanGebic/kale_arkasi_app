@@ -12,6 +12,7 @@ class StandingsEntry {
   final String? clubLogoUrl;
   final String? clubSlug;
   final String? clubPrimaryColor;
+  final List<Player> players;
 
   StandingsEntry({
     required this.rank,
@@ -27,6 +28,7 @@ class StandingsEntry {
     this.clubLogoUrl,
     this.clubSlug,
     this.clubPrimaryColor,
+    this.players = const [],
   });
 
   factory StandingsEntry.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,37 @@ class StandingsEntry {
       clubLogoUrl: json['club']['logoUrl'],
       clubSlug: json['club']['slug'],
       clubPrimaryColor: json['club']['primaryColor'],
+      players: json['club']['players'] != null
+          ? (json['club']['players'] as List)
+              .map((p) => Player.fromJson(p))
+              .toList()
+          : [],
+    );
+  }
+}
+
+class Player {
+  final String name;
+  final String? photoUrl;
+  final String? position;
+  final String? shirtNumber;
+  final String? nationality;
+
+  Player({
+    required this.name,
+    this.photoUrl,
+    this.position,
+    this.shirtNumber,
+    this.nationality,
+  });
+
+  factory Player.fromJson(Map<String, dynamic> json) {
+    return Player(
+      name: json['name'],
+      photoUrl: json['photoUrl'],
+      position: json['position'],
+      shirtNumber: json['shirtNumber'],
+      nationality: json['nationality'],
     );
   }
 }
