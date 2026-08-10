@@ -12,6 +12,13 @@ import '../repository/economy_repository.dart';
 import '../repository/leaderboard_repository.dart';
 import '../repository/tasks_repository.dart';
 import '../../../core/network/socket_client.dart';
+import '../../superlig/ui/superlig_screen.dart';
+import '../../superlig/cubit/superlig_cubit.dart';
+import '../../superlig/cubit/superlig_state.dart';
+import '../../superlig/data/repository/superlig_repository.dart';
+import '../../superlig/data/models/superlig_models.dart';
+import '../../auth/cubit/auth_cubit.dart';
+import '../../auth/cubit/auth_state.dart';
 
 // -- Renk Paleti (Turf Green & Tea Bronze) --
 const Color turfGreen = Color(0xFF1B5E20);
@@ -38,6 +45,9 @@ class HomeScreen extends StatelessWidget {
           create: (context) =>
               LeaderboardCubit(LeaderboardRepository(), userToken)
                 ..fetchLeaderboard(),
+        ),
+        BlocProvider(
+          create: (context) => SuperligCubit(SuperligRepository())..fetchAllData(),
         ),
       ],
       child: HomeView(userToken: userToken),
@@ -124,6 +134,21 @@ class _HomeViewState extends State<HomeView> {
                       ),
                     ),
                   ],
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.sports_soccer, color: Colors.white),
+            tooltip: 'Süper Lig',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BlocProvider(
+                    create: (context) => SuperligCubit(SuperligRepository()),
+                    child: const SuperligScreen(),
+                  ),
                 ),
               );
             },
@@ -291,71 +316,164 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildMatchHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-      decoration: const BoxDecoration(
-        color: turfGreen,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-        image: DecorationImage(
-          image: AssetImage(
-            'assets/images/stadium_bg.jpg',
-          ), // İleride eklenebilir, sorun çıkarmaz
-          fit: BoxFit.cover,
-          opacity: 0.1,
-        ),
-      ),
-
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.black45,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'Sıradaki Maç',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+    return BlocBuilder<SuperligCubit, SuperligState>(
+      builder: (context, state) {
+        if (state is SuperligLoading || state is SuperligInitial) {
+          return Container(
+            height: 200,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            decoration: const BoxDecoration(
+              color: turfGreen,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(32),
+                bottomRight: Radius.circular(32),
               ),
             ),
+            child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+          );
+        }
+
+        Fixture? nextMatch;
+        if (state is SuperligLoaded) {
+          final now = DateTime.now();
+          final authState = context.read<AuthCubit>().state;
+          String? favoriteTeamId;
+          
+          if (authState is AuthSuccess) {
+            favoriteTeamId = authState.user['clubId'] ?? authState.user['favoriteTeamId'];
+          }
+
+          var futureMatches = state.fixtures
+              .where((f) => f.matchDate.isAfter(now))
+              .toList()
+            ..sort((a, b) => a.matchDate.compareTo(b.matchDate));
+
+          if (favoriteTeamId != null) {
+            final userTeamMatches = futureMatches.where((f) => 
+                f.homeClubId == favoriteTeamId || f.awayClubId == favoriteTeamId).toList();
+            if (userTeamMatches.isNotEmpty) {
+              nextMatch = userTeamMatches.first;
+            }
+          }
+
+          // Fallback if user's team has no future match or user not logged in
+          if (nextMatch == null && futureMatches.isNotEmpty) {
+            nextMatch = futureMatches.first;
+          }
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+          decoration: const BoxDecoration(
+            color: turfGreen,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(32),
+              bottomRight: Radius.circular(32),
+            ),
+            image: DecorationImage(
+              image: AssetImage(
+                'assets/images/stadium_bg.jpg',
+              ), // İleride eklenebilir, sorun çıkarmaz
+              fit: BoxFit.cover,
+              opacity: 0.1,
+            ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
             children: [
-              _buildTeamLogoPlaceholder('TS', Colors.blue.shade900),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Text(
-                  'VS',
-                  style: TextStyle(
-                    color: teaBronze,
-                    fontSize: 20,
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.w900,
+                  nextMatch != null
+                      ? '${nextMatch.week}. Hafta Karşılaşması'
+                      : 'Sıradaki Maç',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              _buildTeamLogoPlaceholder('FB', Colors.yellow.shade700),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (nextMatch?.homeClubLogoUrl != null)
+                    Image.network(nextMatch!.homeClubLogoUrl!, width: 60, height: 60)
+                  else if (nextMatch?.homeClubSlug != null)
+                    Image.asset('assets/images/clubs/${nextMatch!.homeClubSlug}.png', width: 60, height: 60, errorBuilder: (c,e,s) => _buildTeamLogoPlaceholder(nextMatch?.homeClubName.substring(0, 2).toUpperCase() ?? 'EV', Colors.blue.shade900))
+                  else
+                    _buildTeamLogoPlaceholder(
+                        nextMatch?.homeClubName.substring(0, 2).toUpperCase() ?? 'EV',
+                        Colors.blue.shade900),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'VS',
+                      style: TextStyle(
+                        color: teaBronze,
+                        fontSize: 20,
+                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  if (nextMatch?.awayClubLogoUrl != null)
+                    Image.network(nextMatch!.awayClubLogoUrl!, width: 60, height: 60)
+                  else if (nextMatch?.awayClubSlug != null)
+                    Image.asset('assets/images/clubs/${nextMatch!.awayClubSlug}.png', width: 60, height: 60, errorBuilder: (c,e,s) => _buildTeamLogoPlaceholder(nextMatch?.awayClubName.substring(0, 2).toUpperCase() ?? 'DEP', Colors.yellow.shade700))
+                  else
+                    _buildTeamLogoPlaceholder(
+                        nextMatch?.awayClubName.substring(0, 2).toUpperCase() ?? 'DEP',
+                        Colors.yellow.shade700),
+                ],
+              ),
+              const SizedBox(height: 20),
+              if (nextMatch != null)
+                StreamBuilder(
+                  stream: Stream.periodic(const Duration(seconds: 1)),
+                  builder: (context, snapshot) {
+                    final diff = nextMatch!.matchDate.difference(DateTime.now());
+                    if (diff.isNegative) {
+                      return const Text(
+                        'Maç Başladı!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      );
+                    }
+                    final days = diff.inDays;
+                    final hours = diff.inHours.remainder(24);
+                    final minutes = diff.inMinutes.remainder(60);
+                    final secs = diff.inSeconds.remainder(60);
+                    return Text(
+                      '${days > 0 ? '$days Gün ' : ''}$hours Saat $minutes Dk $secs Sn Kaldı',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    );
+                  },
+                )
+              else
+                const Text(
+                  'Gelecek maç bulunamadı',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 20),
-          const Text(
-            '2 Gün 14 Saat Kaldı',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -20,4 +20,5 @@ class ApiConstants {
   static const String identityUrl = '$baseUrl/api/identity';
   static const String economyUrl = '$baseUrl/api/economy';
   static const String tasksUrl = '$baseUrl/api/tasks';
+  static const String superligUrl = '$baseUrl/api/superlig';
 }
