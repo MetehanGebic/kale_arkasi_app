@@ -2,8 +2,9 @@ abstract class EconomyState {
   // Her state kendi bakiye bilgisini taşır ki hata/yükleme anlarında
   // ekranda bakiye sıfıra düşmesin, son bilinen değer korunsun.
   final int balance;
+  final DateTime? lastClaimTime;
 
-  const EconomyState(this.balance);
+  const EconomyState(this.balance, {this.lastClaimTime});
 }
 
 class EconomyInitial extends EconomyState {
@@ -11,13 +12,13 @@ class EconomyInitial extends EconomyState {
 }
 
 class EconomyLoading extends EconomyState {
-  const EconomyLoading(super.balance);
+  const EconomyLoading(super.balance, {super.lastClaimTime});
 }
 
 // Bakiyenin sunucudan sadece okunduğu (bir ödül kazanılmadığı) durum için.
 // HomeScreen açılışında mevcut bakiyeyi göstermek amacıyla kullanılır.
 class EconomyBalanceLoaded extends EconomyState {
-  const EconomyBalanceLoaded(super.balance);
+  const EconomyBalanceLoaded(super.balance, {super.lastClaimTime});
 }
 
 class EconomySuccess extends EconomyState {
@@ -28,7 +29,8 @@ class EconomySuccess extends EconomyState {
     required int newBalance,
     required this.reward,
     required this.message,
-  }) : super(newBalance);
+    DateTime? lastClaimTime,
+  }) : super(newBalance, lastClaimTime: lastClaimTime);
 
   int get newBalance => balance;
 }
@@ -36,5 +38,5 @@ class EconomySuccess extends EconomyState {
 class EconomyError extends EconomyState {
   final String message;
 
-  const EconomyError(this.message, super.balance);
+  const EconomyError(this.message, super.balance, {super.lastClaimTime});
 }

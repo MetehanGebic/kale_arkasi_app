@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/auth_cubit.dart';
 import '../cubit/auth_state.dart';
 import 'login_screen.dart';
-import '../../home/ui/home_screen.dart';
+import '../../home/ui/main_navigation_screen.dart';
 
 const Color turfGreen = Color(0xFF1B5E20);
 const Color teaBronze = Color(0xFFD4AF37);
@@ -90,7 +90,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
-                builder: (_) => HomeScreen(userToken: token.toString()),
+                builder: (_) =>
+                    MainNavigationScreen(userToken: token.toString()),
               ),
               (route) => false,
             );
@@ -172,7 +173,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             child: CircularProgressIndicator(color: turfGreen),
                           )
                         : DropdownButtonFormField<String>(
-                            value: _selectedClubId,
+                            initialValue: _selectedClubId,
                             hint: const Text('Gönül Verdiğin Takım'),
                             icon: const Icon(
                               Icons.arrow_drop_down_circle,

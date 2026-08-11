@@ -13,28 +13,32 @@ class EconomyCubit extends Cubit<EconomyState> {
   // olduğu gibi kalır, kullanıcıyı hata mesajıyla rahatsız etmeyiz.
   Future<void> fetchBalance(String token) async {
     try {
-      final balance = await _repository.getBalance(token);
-      emit(EconomyBalanceLoaded(balance));
+      final result = await _repository.getBalance(token);
+      final balance = result['teaBalance'] as int;
+      final dateStr = result['lastDailyTeaClaimAt'] as String?;
+      final lastClaim = dateStr != null ? DateTime.parse(dateStr) : null;
+      emit(EconomyBalanceLoaded(balance, lastClaimTime: lastClaim));
     } catch (_) {
-      // Sessizce geç: profil bilgisi çekilemedi, kullanıcı yine de
-      // "Günlük Çayını Al" tuşuyla normal akışa devam edebilir.
+      // Sessizce geç
     }
   }
 
   Future<void> claimDailyTea(String token) async {
-    // Mevcut state'teki bakiyeyi koru; loading/error anlarında da
-    // ekranda son bilinen bakiye görünsün, sıfıra düşmesin.
     final currentBalance = state.balance;
-    emit(EconomyLoading(currentBalance));
+    final currentLastClaim = state.lastClaimTime;
+    emit(EconomyLoading(currentBalance, lastClaimTime: currentLastClaim));
 
     try {
       final result = await _repository.claimDailyTea(token);
+      final dateStr = result['lastDailyTeaClaimAt'] as String?;
+      final lastClaim = dateStr != null ? DateTime.parse(dateStr) : null;
 
       emit(
         EconomySuccess(
           newBalance: result['newBalance'],
           reward: result['reward'],
           message: result['message'],
+          lastClaimTime: lastClaim,
         ),
       );
     } catch (e) {
@@ -42,6 +46,7 @@ class EconomyCubit extends Cubit<EconomyState> {
         EconomyError(
           e.toString().replaceAll('Exception: ', ''),
           currentBalance,
+          lastClaimTime: currentLastClaim,
         ),
       );
     }

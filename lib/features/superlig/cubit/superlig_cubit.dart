@@ -8,6 +8,7 @@ class SuperligCubit extends Cubit<SuperligState> {
   SuperligCubit(this.repository) : super(SuperligInitial());
 
   Future<void> fetchAllData() async {
+    if (isClosed) return;
     emit(SuperligLoading());
     try {
       final standings = await repository.getStandings();
@@ -15,14 +16,18 @@ class SuperligCubit extends Cubit<SuperligState> {
       final topScorers = await repository.getTopScorers();
       final transfers = await repository.getTransfers();
       
-      emit(SuperligLoaded(
-        standings: standings,
-        fixtures: fixtures,
-        topScorers: topScorers,
-        transfers: transfers,
-      ));
+      if (!isClosed) {
+        emit(SuperligLoaded(
+          standings: standings,
+          fixtures: fixtures,
+          topScorers: topScorers,
+          transfers: transfers,
+        ));
+      }
     } catch (e) {
-      emit(SuperligError(e.toString()));
+      if (!isClosed) {
+        emit(SuperligError(e.toString()));
+      }
     }
   }
 }

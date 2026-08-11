@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../data/auth_repository.dart';
-import '../../home/ui/home_screen.dart';
+import '../../home/ui/main_navigation_screen.dart';
 import 'login_screen.dart';
 
 /// Uygulama açılışında kayıtlı bir JWT var mı diye bakar.
@@ -41,7 +41,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         final token = snapshot.data;
         if (token != null && token.isNotEmpty) {
-          return HomeScreen(userToken: token);
+          return MainNavigationScreen(userToken: token);
         }
         return const LoginScreen();
       },

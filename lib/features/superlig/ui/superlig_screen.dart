@@ -28,7 +28,6 @@ class _SuperligScreenState extends State<SuperligScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    context.read<SuperligCubit>().fetchAllData();
   }
 
   @override
@@ -137,10 +136,14 @@ class _SuperligScreenState extends State<SuperligScreen>
           rows: standings.map((e) {
             return DataRow(
               onSelectChanged: (_) {
+                final cubit = context.read<SuperligCubit>();
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => TeamProfileScreen(clubName: e.clubName),
+                    builder: (context) => BlocProvider.value(
+                      value: cubit,
+                      child: TeamProfileScreen(clubName: e.clubName),
+                    ),
                   ),
                 );
               },

@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/auth_cubit.dart';
 import '../cubit/auth_state.dart';
 import 'register_screen.dart';
-import '../../home/ui/home_screen.dart';
+import '../../home/ui/main_navigation_screen.dart';
 
 const Color turfGreen = Color(0xFF1B5E20);
 const Color teaBronze = Color(0xFFD4AF37);
@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
-                builder: (_) => HomeScreen(userToken: token.toString()),
+                builder: (_) => MainNavigationScreen(userToken: token.toString()),
               ),
               (route) => false,
             );

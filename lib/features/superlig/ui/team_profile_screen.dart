@@ -15,26 +15,36 @@ class TeamProfileScreen extends StatelessWidget {
     return BlocBuilder<SuperligCubit, SuperligState>(
       builder: (context, state) {
         if (state is SuperligLoading) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         } else if (state is SuperligError) {
           return Scaffold(body: Center(child: Text(state.message)));
         } else if (state is SuperligLoaded) {
           // Find club info
-          final StandingsEntry? clubEntry = state.standings.where((s) => s.clubName == clubName).firstOrNull;
+          final StandingsEntry? clubEntry = state.standings
+              .where((s) => s.clubName == clubName)
+              .firstOrNull;
 
           if (clubEntry == null) {
-            return const Scaffold(body: Center(child: Text('Takım bulunamadı.')));
+            return const Scaffold(
+              body: Center(child: Text('Takım bulunamadı.')),
+            );
           }
 
           // Filter other data
           final clubFixtures = state.fixtures
-              .where((f) => f.homeClubName == clubName || f.awayClubName == clubName)
+              .where(
+                (f) => f.homeClubName == clubName || f.awayClubName == clubName,
+              )
               .toList();
           final clubScorers = state.topScorers
               .where((s) => s.clubName == clubName)
               .toList();
           final clubTransfers = state.transfers
-              .where((t) => t.fromClubName == clubName || t.toClubName == clubName)
+              .where(
+                (t) => t.fromClubName == clubName || t.toClubName == clubName,
+              )
               .toList();
 
           return DefaultTabController(
@@ -47,6 +57,13 @@ class TeamProfileScreen extends StatelessWidget {
                       expandedHeight: 250.0,
                       floating: false,
                       pinned: true,
+                      leading: IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.white,
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
                       flexibleSpace: FlexibleSpaceBar(
                         background: Stack(
                           fit: StackFit.expand,
@@ -55,7 +72,8 @@ class TeamProfileScreen extends StatelessWidget {
                             Image.asset(
                               'assets/images/stadium_bg.jpg', // Assuming we have this or use a color
                               fit: BoxFit.cover,
-                              errorBuilder: (c, e, s) => Container(color: Colors.green.shade900),
+                              errorBuilder: (c, e, s) =>
+                                  Container(color: Colors.green.shade900),
                             ),
                             Container(
                               color: Colors.black.withValues(alpha: 0.6),
@@ -63,12 +81,16 @@ class TeamProfileScreen extends StatelessWidget {
                             Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const SizedBox(height: 40),
+                                const SizedBox(height: 10),
                                 if (clubEntry.clubLogoUrl != null)
                                   CachedNetworkImage(
                                     imageUrl: clubEntry.clubLogoUrl!,
                                     height: 80,
-                                    errorWidget: (c, u, e) => const Icon(Icons.shield, size: 80, color: Colors.white),
+                                    errorWidget: (c, u, e) => const Icon(
+                                      Icons.shield,
+                                      size: 80,
+                                      color: Colors.white,
+                                    ),
                                   )
                                 else if (clubEntry.clubSlug != null)
                                   Image.asset(
@@ -76,7 +98,11 @@ class TeamProfileScreen extends StatelessWidget {
                                     height: 80,
                                   )
                                 else
-                                  const Icon(Icons.shield, size: 80, color: Colors.white),
+                                  const Icon(
+                                    Icons.shield,
+                                    size: 80,
+                                    color: Colors.white,
+                                  ),
                                 const SizedBox(height: 12),
                                 Text(
                                   clubEntry.clubName,
@@ -86,12 +112,36 @@ class TeamProfileScreen extends StatelessWidget {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
+                                if (clubEntry.totalMarketValue != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4.0),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.shade900.withValues(
+                                          alpha: 0.8,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        'Toplam Değer: ${clubEntry.totalMarketValue}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Lig Sırası: ${clubEntry.rank}. | Puan: ${clubEntry.points}',
+                                  'Lig Sırası: ${clubEntry.rank}. | Teknik Direktör: ${clubEntry.coachName ?? "Yok"}',
                                   style: const TextStyle(
                                     color: Colors.white70,
-                                    fontSize: 16,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ],
@@ -116,7 +166,7 @@ class TeamProfileScreen extends StatelessWidget {
                 },
                 body: TabBarView(
                   children: [
-                    _buildSquadTab(clubEntry.players),
+                    _buildSquadTab(clubEntry),
                     _buildFixturesTab(clubFixtures, clubName),
                     _buildTransfersTab(clubTransfers, clubName),
                     _buildStatsTab(clubEntry, clubScorers),
@@ -131,11 +181,14 @@ class TeamProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSquadTab(List<Player> players) {
+  Widget _buildSquadTab(StandingsEntry club) {
+    final players = club.players;
     if (players.isEmpty) {
-      return const Center(child: Text('Kadro bilgisi bulunamadı veya henüz güncellenmedi.'));
+      return const Center(
+        child: Text('Kadro bilgisi bulunamadı veya henüz güncellenmedi.'),
+      );
     }
-    
+
     return ListView.builder(
       padding: const EdgeInsets.all(8),
       itemCount: players.length,
@@ -158,14 +211,33 @@ class TeamProfileScreen extends StatelessWidget {
                         child: CachedNetworkImage(
                           imageUrl: p.photoUrl!,
                           fit: BoxFit.contain,
-                          errorWidget: (c, u, e) => const Icon(Icons.person, color: Colors.grey),
+                          errorWidget: (c, u, e) =>
+                              const Icon(Icons.person, color: Colors.grey),
                         ),
                       ),
                     )
                   : const Icon(Icons.person, color: Colors.grey),
             ),
-            title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(p.position ?? 'Mevki Bilinmiyor'),
+            title: Text(
+              p.name,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(p.position ?? 'Mevki Bilinmiyor'),
+                if (p.marketValue != null)
+                  Text(
+                    'Piyasa Değeri: ${p.marketValue}',
+                    style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                  ),
+              ],
+            ),
+            isThreeLine: p.marketValue != null,
             trailing: p.shirtNumber != null
                 ? CircleAvatar(
                     backgroundColor: Colors.green.shade900,
@@ -183,7 +255,9 @@ class TeamProfileScreen extends StatelessWidget {
   }
 
   Widget _buildFixturesTab(List<Fixture> fixtures, String myClubName) {
-    if (fixtures.isEmpty) return const Center(child: Text('Fikstür bulunamadı.'));
+    if (fixtures.isEmpty) {
+      return const Center(child: Text('Fikstür bulunamadı.'));
+    }
     return ListView.builder(
       padding: const EdgeInsets.all(8),
       itemCount: fixtures.length,
@@ -192,6 +266,7 @@ class TeamProfileScreen extends StatelessWidget {
         final isHome = f.homeClubName == myClubName;
         final opponentName = isHome ? f.awayClubName : f.homeClubName;
         final opponentLogoUrl = isHome ? f.awayClubLogoUrl : f.homeClubLogoUrl;
+        final opponentSlug = isHome ? f.awayClubSlug : f.homeClubSlug;
 
         Color resultColor = Colors.grey;
         String resultText = '-';
@@ -199,7 +274,8 @@ class TeamProfileScreen extends StatelessWidget {
           if (f.homeScore == f.awayScore) {
             resultColor = Colors.orange;
             resultText = 'B';
-          } else if ((isHome && f.homeScore! > f.awayScore!) || (!isHome && f.awayScore! > f.homeScore!)) {
+          } else if ((isHome && f.homeScore! > f.awayScore!) ||
+              (!isHome && f.awayScore! > f.homeScore!)) {
             resultColor = Colors.green;
             resultText = 'G';
           } else {
@@ -214,19 +290,40 @@ class TeamProfileScreen extends StatelessWidget {
             leading: CircleAvatar(
               backgroundColor: resultColor,
               radius: 16,
-              child: Text(resultText, style: const TextStyle(color: Colors.white, fontSize: 12)),
+              child: Text(
+                resultText,
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
             ),
             title: Row(
               children: [
                 if (opponentLogoUrl != null)
-                  CachedNetworkImage(imageUrl: opponentLogoUrl, width: 20, height: 20)
+                  CachedNetworkImage(
+                    imageUrl: opponentLogoUrl,
+                    width: 24,
+                    height: 24,
+                    errorWidget: (c, u, e) =>
+                        const Icon(Icons.shield, size: 24),
+                  )
+                else if (opponentSlug != null)
+                  Image.asset(
+                    'assets/images/clubs/$opponentSlug.png',
+                    width: 24,
+                    height: 24,
+                    errorBuilder: (c, e, s) =>
+                        const Icon(Icons.shield, size: 24),
+                  )
                 else
-                  const Icon(Icons.shield, size: 20),
+                  const Icon(Icons.shield, size: 24),
                 const SizedBox(width: 8),
-                Expanded(child: Text(opponentName, overflow: TextOverflow.ellipsis)),
+                Expanded(
+                  child: Text(opponentName, overflow: TextOverflow.ellipsis),
+                ),
               ],
             ),
-            subtitle: Text('${f.week}. Hafta | ${f.matchDate.day.toString().padLeft(2, '0')}.${f.matchDate.month.toString().padLeft(2, '0')}.${f.matchDate.year}'),
+            subtitle: Text(
+              '${f.week}. Hafta | ${f.matchDate.day.toString().padLeft(2, '0')}.${f.matchDate.month.toString().padLeft(2, '0')}.${f.matchDate.year}',
+            ),
             trailing: Text(
               f.homeScore != null ? '${f.homeScore} - ${f.awayScore}' : 'v',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -238,7 +335,9 @@ class TeamProfileScreen extends StatelessWidget {
   }
 
   Widget _buildTransfersTab(List<Transfer> transfers, String myClubName) {
-    if (transfers.isEmpty) return const Center(child: Text('Transfer bulunamadı.'));
+    if (transfers.isEmpty) {
+      return const Center(child: Text('Transfer bulunamadı.'));
+    }
     return ListView.builder(
       padding: const EdgeInsets.all(8),
       itemCount: transfers.length,
@@ -263,13 +362,17 @@ class TeamProfileScreen extends StatelessWidget {
                         child: CachedNetworkImage(
                           imageUrl: t.playerPhotoUrl!,
                           fit: BoxFit.contain,
-                          errorWidget: (c, u, e) => const Icon(Icons.person, color: Colors.grey),
+                          errorWidget: (c, u, e) =>
+                              const Icon(Icons.person, color: Colors.grey),
                         ),
                       ),
                     )
                   : const Icon(Icons.person, color: Colors.grey),
             ),
-            title: Text(t.playerName, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              t.playerName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Row(
               children: [
                 Icon(
@@ -280,7 +383,9 @@ class TeamProfileScreen extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    isIncoming ? 'Geldiği Takım: ${t.fromClubName}' : 'Gittiği Takım: ${t.toClubName}',
+                    isIncoming
+                        ? 'Geldiği Takım: ${t.fromClubName}'
+                        : 'Gittiği Takım: ${t.toClubName}',
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12),
                   ),
@@ -295,7 +400,11 @@ class TeamProfileScreen extends StatelessWidget {
               ),
               child: Text(
                 t.feeType,
-                style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -314,7 +423,10 @@ class TeamProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Puan Durumu Özeti', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  'Puan Durumu Özeti',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const Divider(),
                 _StatRow(label: 'Sıralama', value: '${club.rank}.'),
                 _StatRow(label: 'Oynanan Maç', value: '${club.played}'),
@@ -331,19 +443,40 @@ class TeamProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         if (scorers.isNotEmpty) ...[
-          const Text('Takımın En Golcüleri', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green)),
-          const SizedBox(height: 8),
-          ...scorers.map((s) => Card(
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.green.shade900,
-                child: Text('${s.rank}', style: const TextStyle(color: Colors.white)),
-              ),
-              title: Text(s.playerName, style: const TextStyle(fontWeight: FontWeight.bold)),
-              trailing: Text('${s.goals} Gol', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'Takımın En Golcüleri',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Colors.green,
             ),
-          )),
-        ]
+          ),
+          const SizedBox(height: 8),
+          ...scorers.map(
+            (s) => Card(
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.green.shade900,
+                  child: Text(
+                    '${s.rank}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                title: Text(
+                  s.playerName,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                trailing: Text(
+                  '${s.goals} Gol',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -354,7 +487,11 @@ class _StatRow extends StatelessWidget {
   final String value;
   final bool isBold;
 
-  const _StatRow({required this.label, required this.value, this.isBold = false});
+  const _StatRow({
+    required this.label,
+    required this.value,
+    this.isBold = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -364,7 +501,13 @@ class _StatRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, fontSize: isBold ? 16 : 14)),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 16 : 14,
+            ),
+          ),
         ],
       ),
     );

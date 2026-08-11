@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../../core/api_constants.dart';
+import '../../../core/network/socket_client.dart';
 import '../../../core/token_storage.dart';
 
 class AuthRepository {
@@ -145,6 +146,9 @@ class AuthRepository {
   /// Uygulama açılışında kayıtlı token var mı diye bakmak için.
   Future<String?> getStoredToken() => _tokenStorage.getToken();
 
-  /// Çıkış yapıldığında token'ı cihazdan temizler.
-  Future<void> logout() => _tokenStorage.clearToken();
+  /// Çıkış yapıldığında token'ı cihazdan temizler ve socket'i kapatır.
+  Future<void> logout() async {
+    SocketClient().disconnect();
+    await _tokenStorage.clearToken();
+  }
 }

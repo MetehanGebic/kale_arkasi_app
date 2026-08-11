@@ -20,7 +20,7 @@ class EconomyRepository {
       final data = response.data;
 
       if (response.statusCode == 200 && data['success'] == true) {
-        return data['data']; // { message, reward, newBalance }
+        return data['data']; // { message, reward, newBalance, lastDailyTeaClaimAt }
       }
       throw Exception(data['message'] ?? 'Çay alınırken bir hata oluştu.');
     } on DioException catch (e) {
@@ -32,7 +32,7 @@ class EconomyRepository {
 
   // Uygulama açılışında (veya HomeScreen her göründüğünde) mevcut bakiyeyi
   // sunucudan çekmek için. Bakiyeyi DEĞİŞTİRMEZ, sadece okur.
-  Future<int> getBalance(String token) async {
+  Future<Map<String, dynamic>> getBalance(String token) async {
     try {
       final response = await _dio.get(
         '$baseUrl/status',
@@ -42,7 +42,7 @@ class EconomyRepository {
       final data = response.data;
 
       if (response.statusCode == 200 && data['success'] == true) {
-        return data['data']['teaBalance'] as int;
+        return data['data']; // { teaBalance, lastDailyTeaClaimAt }
       }
       throw Exception(data['message'] ?? 'Bakiye alınamadı.');
     } on DioException catch (e) {
