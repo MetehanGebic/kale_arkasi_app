@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
+import '../../../core/network/dio_client.dart';
 import '../../../core/api_constants.dart';
 
 class EconomyRepository {
   final Dio _dio;
   final String baseUrl = ApiConstants.economyUrl;
 
-  EconomyRepository({Dio? dio}) : _dio = dio ?? Dio() {
+  EconomyRepository({Dio? dio}) : _dio = dio ?? DioClient.getDio() {
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);
   }

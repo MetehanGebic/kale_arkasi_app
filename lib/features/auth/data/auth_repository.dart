@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/network/dio_client.dart';
 import '../../../core/api_constants.dart';
 import '../../../core/network/socket_client.dart';
 import '../../../core/token_storage.dart';
@@ -9,7 +10,7 @@ class AuthRepository {
   final String _baseUrl = ApiConstants.identityUrl;
 
   AuthRepository({TokenStorage? tokenStorage})
-    : _dio = Dio(),
+    : _dio = DioClient.getDio(),
       _tokenStorage = tokenStorage ?? TokenStorage() {
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);
@@ -150,5 +151,46 @@ class AuthRepository {
   Future<void> logout() async {
     SocketClient().disconnect();
     await _tokenStorage.clearToken();
+  }
+
+  // Get User Profile
+  Future<Map<String, dynamic>> getUserProfile(String token) async {
+    try {
+      final response = await _dio.get(
+        '${ApiConstants.baseUrl}/user/me',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['user'];
+      }
+      throw Exception('Kullanıcı bilgileri alınamadı.');
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data?['message'] ?? 'Sunucu ile iletişim kurulamadı.',
+      );
+    }
+  }
+
+  // Upload Avatar
+  Future<String> uploadAvatar(String token, String filePath) async {
+    try {
+      final formData = FormData.fromMap({
+        'avatar': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+      });
+
+      final response = await _dio.post(
+        '${ApiConstants.baseUrl}/user/avatar',
+        data: formData,
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['avatarUrl'];
+      }
+      throw Exception('Fotoğraf yüklenemedi.');
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data?['message'] ?? 'Sunucu ile iletişim kurulamadı.',
+      );
+    }
   }
 }

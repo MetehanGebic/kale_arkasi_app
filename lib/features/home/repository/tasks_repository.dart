@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/network/dio_client.dart';
 import '../../../core/api_constants.dart';
 
 class TaskItem {
@@ -34,7 +35,7 @@ class TasksRepository {
   final Dio _dio;
   final String _baseUrl = ApiConstants.tasksUrl;
 
-  TasksRepository({Dio? dio}) : _dio = dio ?? Dio() {
+  TasksRepository({Dio? dio}) : _dio = dio ?? DioClient.getDio() {
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);
   }

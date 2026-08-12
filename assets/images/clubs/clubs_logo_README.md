@@ -6,19 +6,19 @@ uygulama dosyayı `assets/images/clubs/<slug>.png` yolundan okuyor.
 
 Beklenen 18 dosya adı (seed.js'teki kulüp listesiyle birebir eşleşiyor):
 
-- amed-sportif-faaliyetler.png
-- besiktas.png
-- corendon-alanyaspor.png
+- amed-sk.png
+- besiktas-istanbul.png
+- alanyaspor.png
 - caykur-rizespor.png
 - corum-fk.png
-- erzurumspor-fk.png
+- buyuksehir-belediye-erzurumspor.png
 - eyupspor.png
-- fenerbahce.png
-- galatasaray.png
+- fenerbahce-istanbul.png
+- galatasaray-istanbul.png
 - gaziantep-fk.png
-- genclerbirligi.png
+- genclerbirligi-ankara.png
 - goztepe.png
-- istanbul-basaksehir.png
+- istanbul-basaksehir-fk.png
 - kasimpasa.png
 - kocaelispor.png
 - konyaspor.png

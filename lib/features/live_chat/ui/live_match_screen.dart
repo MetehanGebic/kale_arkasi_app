@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../../core/widgets/club_logo.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:confetti/confetti.dart';
 import '../../../core/network/socket_client.dart';
@@ -13,6 +14,7 @@ const Color darkSurface = Color(0xFF121212);
 const Color surfaceColor = Color(0xFFF5F5F5);
 
 class LiveMatchScreen extends StatefulWidget {
+  final String matchId;
   final String homeTeam;
   final String awayTeam;
   final String? homeLogo;
@@ -20,7 +22,8 @@ class LiveMatchScreen extends StatefulWidget {
 
   const LiveMatchScreen({
     super.key,
-    this.homeTeam = 'Ãƒâ€¡orum FK',
+    required this.matchId,
+    this.homeTeam = 'Çorum FK',
     this.awayTeam = 'Galatasaray',
     this.homeLogo,
     this.awayLogo,
@@ -31,7 +34,7 @@ class LiveMatchScreen extends StatefulWidget {
 }
 
 class _LiveMatchScreenState extends State<LiveMatchScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _messageController = TextEditingController();
   late ConfettiController _confettiController;
@@ -46,13 +49,13 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     'Veli',
     'Ahmet',
     'Mehmet',
-    'AyÃ…Å¸e',
+    'Ayşe',
     'Burak',
   ];
 
   final Map<String, dynamic> _pinnedMessage = {
     'sender': 'Ahmet',
-    'message': 'SaldÃ„Â±r Ãƒâ€¡orum FK!',
+    'message': 'Saldır Çorum FK!',
     'team': 'home',
   };
 
@@ -62,7 +65,6 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     _confettiController =
         ConfettiController(duration: const Duration(seconds: 3));
 
@@ -70,26 +72,24 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
       if (mounted) setState(() {});
     });
 
-    // 3 sekmeli tab controller: 0 -> Ev Sahibi, 1 -> TarafsÃ„Â±z (default), 2 -> Deplasman
+    // 3 sekmeli tab controller: 0 -> Ev Sahibi, 1 -> Tarafsız (default), 2 -> Deplasman
     _tabController = TabController(length: 3, vsync: this, initialIndex: 1);
     _tabController.addListener(() {
       setState(() {}); // Rebuild UI for dynamic colors
     });
 
-    // BaÃ„Å¸lan ve olaylarÃ„Â± dinle
-    SocketClient().joinMatch('match_1');
+    // Bağlan ve olayları dinle
+    SocketClient().joinMatch(widget.matchId);
 
     SocketClient().onPollUpdated((data) {
       if (mounted) {
         setState(() {
-          final pollId = data['pollId'];
-          final pollData = data['pollData'];
-          for (var i = 0; i < _messages.length; i++) {
-            if (_messages[i]['isPoll'] == true &&
-                _messages[i]['pollData'] != null) {
-              if (_messages[i]['pollData']['id'] == pollId) {
-                _messages[i]['pollData'] = pollData;
-              }
+          final String pollId = data['pollId'];
+          final List options = data['options'] ?? [];
+          for (int i = 0; i < _messages.length; i++) {
+            final msg = _messages[i];
+            if (msg['isPoll'] == true && msg['pollData']['id'] == pollId) {
+              msg['pollData']['options'] = options;
             }
           }
         });
@@ -125,6 +125,14 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
             _redCardHistory[data['target']] = true;
           });
         }
+        
+        String? asset = data['storeAsset'];
+        if (asset != null) {
+          asset = asset.replaceAll('mesale.png', 'mesale.gif');
+          asset = asset.replaceAll('kirmizi_kart.png', 'kart.png');
+          asset = asset.replaceAll('cekirdek.png', 'cekirdek.gif');
+        }
+
         setState(() {
           _messages.add({
             'sender': data['sender'],
@@ -133,7 +141,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
             'team': 'system',
             'isCapo': false,
             'isTeaGift': type == 'cay',
-            'storeAsset': data['storeAsset'],
+            'storeAsset': asset,
           });
         });
       }
@@ -150,6 +158,11 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
 
   @override
   void dispose() {
+    SocketClient().offChatMessage();
+    SocketClient().offPollUpdated();
+    SocketClient().offAddonEvent();
+    SocketClient().leaveMatch(widget.matchId);
+    
     _pollTimer?.cancel();
     _confettiController.dispose();
     _tabController.dispose();
@@ -187,7 +200,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'KAHVEHANE EKLENTÃ„Â°LERÃ„Â°',
+                  'KAHVEHANE EKLENTİLERİ',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -205,9 +218,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                   childAspectRatio: 0.95,
                   children: [
                     _buildStoreItem(
-                      'Ãƒâ€¡ay Ismarla',
-                      'Herkese ÃƒÂ§ay',
-                      '50 Ã¢Ëœâ€¢',
+                      'Çay Ismarla',
+                      'Herkese çay',
+                      '50 ☕',
                       'assets/images/store/cay.png',
                       () {
                         Navigator.pop(context);
@@ -217,7 +230,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                     _buildStoreItem(
                       'Amigo Modu',
                       'Devasa mesaj',
-                      '400 Ã¢Ëœâ€¢',
+                      '400 ☕',
                       'assets/images/store/capo.png',
                       () {
                         Navigator.pop(context);
@@ -225,9 +238,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       },
                     ),
                     _buildStoreItem(
-                      'YabancÃ„Â± Madde',
-                      'Ã…ÂiÃ…Å¸e fÃ„Â±rlat',
-                      '50 Ã¢Ëœâ€¢',
+                      'Yabancı Madde',
+                      'Şişe fırlat',
+                      '50 ☕',
                       'assets/images/store/madde.png',
                       () {
                         Navigator.pop(context);
@@ -235,9 +248,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       },
                     ),
                     _buildStoreItem(
-                      'MeÃ…Å¸ale Yak',
-                      'TribÃƒÂ¼n ateÃ…Å¸i',
-                      '200 Ã¢Ëœâ€¢',
+                      'Meşale Yak',
+                      'Tribün ateşi',
+                      '200 ☕',
                       'assets/images/store/mesale.gif',
                       () {
                         Navigator.pop(context);
@@ -245,9 +258,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       },
                     ),
                     _buildStoreItem(
-                      'Ãƒâ€¡ekirdek',
-                      'Ãƒâ€¡itleyip izle',
-                      '30 Ã¢Ëœâ€¢',
+                      'Çekirdek',
+                      'Çitleyip izle',
+                      '30 ☕',
                       'assets/images/store/cekirdek.gif',
                       () {
                         Navigator.pop(context);
@@ -255,9 +268,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       },
                     ),
                     _buildStoreItem(
-                      'Davul Ãƒâ€¡al',
+                      'Davul Çal',
                       'Ritme ayak uydur',
-                      '100 Ã¢Ëœâ€¢',
+                      '100 ☕',
                       'assets/images/store/davul.png',
                       () {
                         Navigator.pop(context);
@@ -265,9 +278,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       },
                     ),
                     _buildStoreItem(
-                      'KÃ„Â±rmÃ„Â±zÃ„Â± Kart',
+                      'Kırmızı Kart',
                       'Sustur (Ã…Âaka)',
-                      '100 Ã¢Ëœâ€¢',
+                      '100 ☕',
                       'assets/images/store/kart.png',
                       () {
                         Navigator.pop(context);
@@ -275,9 +288,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       },
                     ),
                     _buildStoreItem(
-                      'GÃƒÂ¶zlÃƒÂ¼k',
-                      'Hakem kÃƒÂ¶r',
-                      '25 Ã¢Ëœâ€¢',
+                      'Gözlük',
+                      'Hakem kör',
+                      '25 ☕',
                       'assets/images/store/gozluk.png',
                       () {
                         Navigator.pop(context);
@@ -285,9 +298,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       },
                     ),
                     _buildStoreItem(
-                      'KÃƒÂ¼fÃƒÂ¼r',
+                      'Küfür',
                       'Hakeme isyan',
-                      '30 Ã¢Ëœâ€¢',
+                      '30 ☕',
                       'assets/images/store/kufur.png',
                       () {
                         Navigator.pop(context);
@@ -311,7 +324,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
       builder: (ctx) {
         return AlertDialog(
           title: const Text(
-            'KÃ„Â±rmÃ„Â±zÃ„Â± Kart Kime?',
+            'Kırmızı Kart Kime?',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           content: SizedBox(
@@ -331,7 +344,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            '$user bu maÃƒÂ§ta zaten kÃ„Â±rmÃ„Â±zÃ„Â± kart gÃƒÂ¶rdÃƒÂ¼!',
+                            '$user bu maçta zaten kırmızı kart gördü!',
                           ),
                           backgroundColor: Colors.red,
                         ),
@@ -459,6 +472,13 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
       SocketClient().sendMessage('match_1', text, isCapo: sendAsCapo);
     } else {
       // Local fallbacks or prediction cards
+      String? asset = storeAsset;
+      if (asset != null) {
+        asset = asset.replaceAll('mesale.png', 'mesale.gif');
+        asset = asset.replaceAll('kirmizi_kart.png', 'kart.png');
+        asset = asset.replaceAll('cekirdek.png', 'cekirdek.gif');
+      }
+      
       setState(() {
         _messages.add({
           'sender': sender,
@@ -468,7 +488,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
           'isCapo': isCapo,
           'isTeaGift': isTeaGift,
           'isPredictionCard': isPredictionCard,
-          'storeAsset': storeAsset,
+          'storeAsset': asset,
         });
       });
     }
@@ -518,12 +538,12 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 widget.homeLogo != null 
-                    ? ClipOval(child: Image.network(widget.homeLogo!, width: 20, height: 20))
+                    ? ClubLogo(clubSlug: null, logoUrl: widget.homeLogo, width: 20, height: 20)
                     : const CircleAvatar(
                         radius: 10,
                         backgroundColor: Colors.white,
                         child: Text(
-                          'Ãƒâ€¡',
+                          'Ç',
                           style: TextStyle(
                             fontSize: 10,
                             color: Colors.black,
@@ -561,7 +581,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                 ),
                 const SizedBox(width: 6),
                 widget.awayLogo != null 
-                    ? ClipOval(child: Image.network(widget.awayLogo!, width: 20, height: 20))
+                    ? ClubLogo(clubSlug: null, logoUrl: widget.awayLogo, width: 20, height: 20)
                     : const CircleAvatar(
                         radius: 10,
                         backgroundColor: Colors.white,
@@ -608,8 +628,8 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: activeColor,
-          labelColor: activeColor,
+          indicatorColor: teaBronze,
+          labelColor: teaBronze,
           unselectedLabelColor: Colors.white70,
           tabs: [
             Tab(text: widget.homeTeam),
@@ -687,7 +707,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ÄŸÅ¸â€œÅ’ SabitlenmiÃ…Å¸ Mesaj: ${_pinnedMessage['sender']}',
+                  '📌 Sabitlenmiş Mesaj: ${_pinnedMessage['sender']}',
                   style: const TextStyle(
                     fontSize: 10,
                     color: teaBronze,
@@ -837,7 +857,6 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
           ),
           const SizedBox(height: 16),
           ...options.asMap().entries.map((entry) {
-            final int index = entry.key;
             final opt = entry.value;
             final String text = opt['text'];
             final int votes = ((opt['votes'] ?? 0) as num).toInt();
@@ -845,14 +864,14 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
 
             return GestureDetector(
               onTap: () {
-                if (!hasVoted) {
-                  setState(() {
-                    _myVotedPolls.add(pollId);
-                  });
-                  SocketClient().votePoll(pollId, index);
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  if (!hasVoted) {
+                    setState(() {
+                      _myVotedPolls.add(pollId);
+                    });
+                    SocketClient().submitPollVote(widget.matchId, pollId, opt['id']);
+                    ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('"$text" seÃ§eneÄŸine oy verdiniz!'),
+                      content: Text('"$text" seçeneğine oy verdiniz!'),
                       backgroundColor: turfGreen,
                     ),
                   );
@@ -923,7 +942,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     final String team = msg['team'] ?? 'neutral';
 
     Color borderColor = Colors.grey;
-    if (team == 'home') borderColor = Colors.red; // Ãƒâ€¡orum mock color
+    if (team == 'home') borderColor = Colors.red; // Çorum mock color
     if (team == 'away') borderColor = Colors.orange; // GS mock color
 
     if (isBot) {
@@ -998,7 +1017,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
             else if (isTeaGift)
               Icon(Icons.emoji_food_beverage, color: customTeaColor)
             else
-              const Text("ÄŸÅ¸â€˜Â´ÄŸÅ¸ÂÂ¼", style: TextStyle(fontSize: 20)),
+              const Text("👨", style: TextStyle(fontSize: 20)),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -1072,7 +1091,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                             Icon(Icons.star, color: teaBronze, size: 10),
                             SizedBox(width: 2),
                             Text(
-                              'AÃ„ÂA',
+                              'AĞA',
                               style: TextStyle(
                                 fontSize: 9,
                                 color: teaBronze,
@@ -1206,7 +1225,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                   BlocBuilder<EconomyCubit, EconomyState>(
                     builder: (context, state) {
                       return Text(
-                        '${state.balance} Ã¢Ëœâ€¢',
+                        '${state.balance} ☕',
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -1229,7 +1248,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                     : null,
                 decoration: InputDecoration(
                   hintText: _capoMessagesLeft > 0
-                      ? 'ÄŸÅ¸â€œÂ£ Amigo Modu ($_capoMessagesLeft)'
+                      ? '📢 Amigo Modu ($_capoMessagesLeft)'
                       : 'Mesaj yaz...',
                   hintStyle: _capoMessagesLeft > 0
                       ? const TextStyle(color: teaBronze)

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../data/auth_repository.dart';
 import '../../home/ui/main_navigation_screen.dart';
 import 'login_screen.dart';
+import '../../../core/network/dio_client.dart';
 
 /// Uygulama açılışında kayıtlı bir JWT var mı diye bakar.
 /// - Token varsa: kullanıcıyı tekrar login olmaya zorlamadan HomeScreen'e yönlendirir.
@@ -21,11 +23,28 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   late Future<String?> _tokenFuture;
+  late StreamSubscription<UnauthorizedEvent> _unauthorizedSub;
 
   @override
   void initState() {
     super.initState();
     _tokenFuture = context.read<AuthRepository>().getStoredToken();
+    _unauthorizedSub = unauthorizedStream.stream.listen((_) {
+      if (mounted) {
+        setState(() {
+          _tokenFuture = Future.value(null);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.')),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _unauthorizedSub.cancel();
+    super.dispose();
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../core/widgets/club_logo.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/economy_cubit.dart';
 import '../cubit/economy_state.dart';
@@ -33,7 +34,7 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    // Socket.io BaÅŸlatma ve Dinleme
+    // Socket.io Başlatma ve Dinleme
     SocketClient().init(token: widget.userToken);
     SocketClient().onLeaderboardUpdated(() {
       if (mounted) {
@@ -72,7 +73,7 @@ class _HomeViewState extends State<HomeView> {
               backgroundColor: Colors.white24,
               child: Text(
                 _decodeUsername(widget.userToken).isNotEmpty &&
-                        _decodeUsername(widget.userToken) != 'KullanÄ±cÄ±'
+                        _decodeUsername(widget.userToken) != 'Kullanıcı'
                     ? _decodeUsername(widget.userToken)[0].toUpperCase()
                     : 'U',
                 style: const TextStyle(
@@ -90,14 +91,14 @@ class _HomeViewState extends State<HomeView> {
           if (state is TasksActionSuccess) {
             _showModernSnackBar(
               context,
-              'â˜• ${state.message} (+${state.reward})',
+              '✅ ${state.message} (+${state.reward})',
               turfGreen,
             );
             context.read<EconomyCubit>().fetchBalance(widget.userToken);
           } else if (state is TasksError) {
             _showModernSnackBar(
               context,
-              'âš ï¸ ${state.message}',
+              '❌ ${state.message}',
               Colors.red.shade700,
             );
           }
@@ -117,7 +118,7 @@ class _HomeViewState extends State<HomeView> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: const Text(
-                  'GÃ¼nÃ¼n GÃ¶revleri',
+                  'Günün Görevleri',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
@@ -170,7 +171,7 @@ class _HomeViewState extends State<HomeView> {
               ),
               const SizedBox(height: 12),
               _buildTransfersShowcase(context),
-              const SizedBox(height: 100), // FAB boÅŸluÄŸu
+              const SizedBox(height: 100), // FAB boşluğu
             ],
           ),
         ),
@@ -204,13 +205,13 @@ class _HomeViewState extends State<HomeView> {
         if (state is EconomySuccess) {
           _showModernSnackBar(
             context,
-            'â˜• ${state.message} (+${state.reward})',
+            '✅ ${state.message} (+${state.reward})',
             turfGreen,
           );
         } else if (state is EconomyError) {
           _showModernSnackBar(
             context,
-            'âš ï¸ ${state.message}',
+            '❌ ${state.message}',
             Colors.red.shade700,
           );
         }
@@ -223,7 +224,7 @@ class _HomeViewState extends State<HomeView> {
           stream: Stream.periodic(const Duration(seconds: 1)),
           builder: (context, snapshot) {
             bool isReady = true;
-            String label = 'GÃ¼nlÃ¼k Ã‡ayÄ±nÄ± Al';
+            String label = 'Günlük Çayını Al';
             if (lastClaim != null) {
               // But timestamp might be UTC from DB, ensure both are same timezone
               final diff = DateTime.now().difference(lastClaim.toLocal());
@@ -233,7 +234,7 @@ class _HomeViewState extends State<HomeView> {
                 final h = remaining.inHours.toString().padLeft(2, '0');
                 final m = (remaining.inMinutes % 60).toString().padLeft(2, '0');
                 final s = (remaining.inSeconds % 60).toString().padLeft(2, '0');
-                label = '$h:$m:$s KaldÄ±';
+                label = '$h:$m:$s Kaldı';
               }
             }
 
@@ -251,7 +252,7 @@ class _HomeViewState extends State<HomeView> {
                             if (!isReady) {
                               _showModernSnackBar(
                                 context,
-                                'âš ï¸ Ã‡ay henÃ¼z demini almadÄ±! $label sonra tekrar gel.',
+                                '☕ Çay henüz demini almadı! $label sonra tekrar gel.',
                                 Colors.orange.shade800,
                               );
                               return;
@@ -294,17 +295,17 @@ class _HomeViewState extends State<HomeView> {
   }
 
   String _decodeUsername(String token) {
-    if (token.isEmpty) return 'KullanÄ±cÄ±';
+    if (token.isEmpty) return 'Kullanıcı';
     try {
       final parts = token.split('.');
-      if (parts.length != 3) return 'KullanÄ±cÄ±';
+      if (parts.length != 3) return 'Kullanıcı';
       final payload = parts[1];
       final normalized = base64Url.normalize(payload);
       final decoded = utf8.decode(base64Url.decode(normalized));
       final map = json.decode(decoded);
-      return map['username'] ?? 'KullanÄ±cÄ±';
+      return map['username'] ?? 'Kullanıcı';
     } catch (e) {
-      return 'KullanÄ±cÄ±';
+      return 'Kullanıcı';
     }
   }
 
@@ -337,7 +338,7 @@ class _HomeViewState extends State<HomeView> {
                 radius: 24,
                 backgroundColor: Colors.white24,
                 child: Text(
-                  username.isNotEmpty && username != 'KullanÄ±cÄ±'
+                  username.isNotEmpty && username != 'Kullanıcı'
                       ? username[0].toUpperCase()
                       : 'U',
                   style: const TextStyle(
@@ -362,7 +363,7 @@ class _HomeViewState extends State<HomeView> {
                     ),
                     const SizedBox(height: 2),
                     const Text(
-                      'GÃ¼nÃ¼n gÃ¶revlerini tamamlamayÄ± unutma.',
+                      'Günün görevlerini tamamlamayı unutma.',
                       style: TextStyle(color: Colors.white70, fontSize: 11),
                     ),
                     const SizedBox(height: 8),
@@ -371,12 +372,31 @@ class _HomeViewState extends State<HomeView> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => MultiBlocProvider(providers: [BlocProvider.value(value: context.read<EconomyCubit>()), BlocProvider.value(value: context.read<TasksCubit>()), BlocProvider.value(value: context.read<SuperligCubit>())], child: const LiveMatchScreen(homeLogo: 'https://tmssl.akamaized.net/images/wappen/normquad/3041.png', awayLogo: 'https://tmssl.akamaized.net/images/wappen/normquad/141.png')),
+                            builder: (_) => MultiBlocProvider(
+                              providers: [
+                                BlocProvider.value(
+                                  value: context.read<EconomyCubit>(),
+                                ),
+                                BlocProvider.value(
+                                  value: context.read<TasksCubit>(),
+                                ),
+                                BlocProvider.value(
+                                  value: context.read<SuperligCubit>(),
+                                ),
+                              ],
+                              child: const LiveMatchScreen(
+                                matchId: 'match_1',
+                                homeLogo:
+                                    'https://tmssl.akamaized.net/images/wappen/normquad/3041.png',
+                                awayLogo:
+                                    'https://tmssl.akamaized.net/images/wappen/normquad/141.png',
+                              ),
+                            ),
                           ),
                         );
                       },
                       icon: const Icon(Icons.forum, size: 16),
-                      label: const Text('CanlÄ± Kahvehane (Test)'),
+                      label: const Text('Canlı Kahvehane (Test)'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: teaBronze,
                         foregroundColor: Colors.white,
@@ -523,8 +543,8 @@ class _HomeViewState extends State<HomeView> {
                     const SizedBox(width: 4),
                     Text(
                       nextMatch != null
-                          ? '${nextMatch.week}. Hafta KarÅŸÄ±laÅŸmasÄ±'
-                          : 'SÄ±radaki MaÃ§',
+                          ? '${nextMatch.week}. Hafta Karşılaşması'
+                          : 'Sıradaki Maç',
                       style: TextStyle(
                         color: Colors.red.shade700,
                         fontSize: 12,
@@ -540,33 +560,7 @@ class _HomeViewState extends State<HomeView> {
                 children: [
                   Column(
                     children: [
-                      if (nextMatch?.homeClubLogoUrl != null)
-                        Image.network(
-                          nextMatch!.homeClubLogoUrl!,
-                          width: 48,
-                          height: 48,
-                        )
-                      else if (nextMatch?.homeClubSlug != null)
-                        Image.asset(
-                          'assets/images/clubs/${nextMatch!.homeClubSlug}.png',
-                          width: 48,
-                          height: 48,
-                          errorBuilder: (c, e, s) => _buildTeamLogoPlaceholder(
-                            nextMatch?.homeClubName
-                                    .substring(0, 2)
-                                    .toUpperCase() ??
-                                'EV',
-                            Colors.blue.shade900,
-                          ),
-                        )
-                      else
-                        _buildTeamLogoPlaceholder(
-                          nextMatch?.homeClubName
-                                  .substring(0, 2)
-                                  .toUpperCase() ??
-                              'EV',
-                          Colors.blue.shade900,
-                        ),
+                      ClubLogo(clubSlug: nextMatch?.homeClubSlug, logoUrl: nextMatch?.homeClubLogoUrl, width: 48, height: 48),
                       const SizedBox(height: 8),
                       SizedBox(
                         width: 80,
@@ -594,33 +588,7 @@ class _HomeViewState extends State<HomeView> {
                   ),
                   Column(
                     children: [
-                      if (nextMatch?.awayClubLogoUrl != null)
-                        Image.network(
-                          nextMatch!.awayClubLogoUrl!,
-                          width: 48,
-                          height: 48,
-                        )
-                      else if (nextMatch?.awayClubSlug != null)
-                        Image.asset(
-                          'assets/images/clubs/${nextMatch!.awayClubSlug}.png',
-                          width: 48,
-                          height: 48,
-                          errorBuilder: (c, e, s) => _buildTeamLogoPlaceholder(
-                            nextMatch?.awayClubName
-                                    .substring(0, 2)
-                                    .toUpperCase() ??
-                                'DEP',
-                            Colors.yellow.shade700,
-                          ),
-                        )
-                      else
-                        _buildTeamLogoPlaceholder(
-                          nextMatch?.awayClubName
-                                  .substring(0, 2)
-                                  .toUpperCase() ??
-                              'DEP',
-                          Colors.yellow.shade700,
-                        ),
+                      ClubLogo(clubSlug: nextMatch?.awayClubSlug, logoUrl: nextMatch?.awayClubLogoUrl, width: 48, height: 48),
                       const SizedBox(height: 8),
                       SizedBox(
                         width: 80,
@@ -649,7 +617,7 @@ class _HomeViewState extends State<HomeView> {
                     );
                     if (diff.isNegative) {
                       return const Text(
-                        'MaÃ§ BaÅŸladÄ±!',
+                        'Maç Başladı!',
                         style: TextStyle(
                           color: turfGreen,
                           fontWeight: FontWeight.w900,
@@ -671,7 +639,7 @@ class _HomeViewState extends State<HomeView> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '${days > 0 ? '$days GÃ¼n ' : ''}$hours Saat $minutes Dk $secs Sn KaldÄ±',
+                        '${days > 0 ? '$days Gün ' : ''}$hours Saat $minutes Dk $secs Sn Kaldı',
                         style: const TextStyle(
                           color: Colors.black87,
                           fontWeight: FontWeight.w600,
@@ -683,7 +651,7 @@ class _HomeViewState extends State<HomeView> {
                 )
               else
                 const Text(
-                  'Gelecek maÃ§ bulunamadÄ±',
+                  'Gelecek maç bulunamadı',
                   style: TextStyle(
                     color: Colors.grey,
                     fontWeight: FontWeight.w600,
@@ -697,32 +665,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildTeamLogoPlaceholder(String text, Color color) {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.5),
-            blurRadius: 10,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 24,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildTasksSection(BuildContext context) {
     return BlocBuilder<TasksCubit, TasksState>(
@@ -734,7 +677,7 @@ class _HomeViewState extends State<HomeView> {
         }
         if (state is TasksError) {
           return Text(
-            'GÃ¶revler yÃ¼klenemedi: ${state.message}',
+            'Görevler yüklenemedi: ${state.message}',
             style: const TextStyle(color: Colors.red),
           );
         }
@@ -748,7 +691,7 @@ class _HomeViewState extends State<HomeView> {
           tasks = completing.tasks;
           completingTaskId = completing.taskId;
         }
-        if (tasks.isEmpty) return const Text('GÃ¶rev bulunamadÄ±.');
+        if (tasks.isEmpty) return const Text('Görev bulunamadı.');
         return SizedBox(
           height: 160,
           child: ListView.builder(
@@ -843,7 +786,7 @@ class _HomeViewState extends State<HomeView> {
                               )
                             else if (task.completedToday)
                               const Text(
-                                'TamamlandÄ±',
+                                'Tamamlandı',
                                 style: TextStyle(
                                   color: Colors.green,
                                   fontWeight: FontWeight.bold,
@@ -897,13 +840,13 @@ class _HomeViewState extends State<HomeView> {
         }
         if (state is LeaderboardError) {
           return Text(
-            'Liderlik tablosu yÃ¼klenemedi: ${state.message}',
+            'Liderlik tablosu yüklenemedi: ${state.message}',
             style: const TextStyle(color: Colors.red),
           );
         }
         final entries = (state as LeaderboardLoaded).entries;
         if (entries.isEmpty) return const Text('Kimse yok.');
-        // Sadece ilk 5'i gÃ¶ster
+        // Sadece ilk 5'i göster
         final top5 = entries.take(5).toList();
         return Column(
           children: top5.asMap().entries.map((e) {
@@ -1030,7 +973,7 @@ class _HomeViewState extends State<HomeView> {
         if (transfers.isEmpty) {
           return const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text('HenÃ¼z transfer verisi yok.'),
+            child: Text('Henüz transfer verisi yok.'),
           );
         }
         return SizedBox(
@@ -1164,6 +1107,3 @@ class _HomeViewState extends State<HomeView> {
     return Color(intVal);
   }
 }
-
-
-

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/club_logo.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../cubit/superlig_cubit.dart';
@@ -82,27 +83,7 @@ class TeamProfileScreen extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 const SizedBox(height: 10),
-                                if (clubEntry.clubLogoUrl != null)
-                                  CachedNetworkImage(
-                                    imageUrl: clubEntry.clubLogoUrl!,
-                                    height: 80,
-                                    errorWidget: (c, u, e) => const Icon(
-                                      Icons.shield,
-                                      size: 80,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                else if (clubEntry.clubSlug != null)
-                                  Image.asset(
-                                    'assets/images/clubs/${clubEntry.clubSlug}.png',
-                                    height: 80,
-                                  )
-                                else
-                                  const Icon(
-                                    Icons.shield,
-                                    size: 80,
-                                    color: Colors.white,
-                                  ),
+                                ClubLogo(clubSlug: clubEntry.clubSlug, logoUrl: clubEntry.clubLogoUrl, width: 80, height: 80),
                                 const SizedBox(height: 12),
                                 Text(
                                   clubEntry.clubName,
@@ -297,24 +278,7 @@ class TeamProfileScreen extends StatelessWidget {
             ),
             title: Row(
               children: [
-                if (opponentLogoUrl != null)
-                  CachedNetworkImage(
-                    imageUrl: opponentLogoUrl,
-                    width: 24,
-                    height: 24,
-                    errorWidget: (c, u, e) =>
-                        const Icon(Icons.shield, size: 24),
-                  )
-                else if (opponentSlug != null)
-                  Image.asset(
-                    'assets/images/clubs/$opponentSlug.png',
-                    width: 24,
-                    height: 24,
-                    errorBuilder: (c, e, s) =>
-                        const Icon(Icons.shield, size: 24),
-                  )
-                else
-                  const Icon(Icons.shield, size: 24),
+                ClubLogo(clubSlug: opponentSlug, logoUrl: opponentLogoUrl, width: 24, height: 24),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(opponentName, overflow: TextOverflow.ellipsis),

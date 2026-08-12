@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/club_logo.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../cubit/superlig_cubit.dart';
@@ -157,34 +158,8 @@ class _SuperligScreenState extends State<SuperligScreen>
                 DataCell(
                   Row(
                     children: [
-                      if (e.clubLogoUrl != null) ...[
-                        Image.network(
-                          e.clubLogoUrl!,
-                          width: 24,
-                          height: 24,
-                          errorBuilder: (c, err, s) => const Icon(
-                            Icons.shield,
-                            size: 24,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ] else if (e.clubSlug != null) ...[
-                        Image.asset(
-                          'assets/images/clubs/${e.clubSlug}.png',
-                          width: 24,
-                          height: 24,
-                          errorBuilder: (c, err, s) => const Icon(
-                            Icons.shield,
-                            size: 24,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ] else ...[
-                        const Icon(Icons.shield, size: 24, color: Colors.grey),
-                        const SizedBox(width: 8),
-                      ],
+                      ClubLogo(clubSlug: e.clubSlug, logoUrl: e.clubLogoUrl, width: 24, height: 24),
+                      const SizedBox(width: 8),
                       Text(
                         e.clubName,
                         style: const TextStyle(fontWeight: FontWeight.w700),
@@ -313,26 +288,7 @@ class _SuperligScreenState extends State<SuperligScreen>
                 flex: 3,
                 child: Column(
                   children: [
-                    if (f.homeClubLogoUrl != null)
-                      CachedNetworkImage(
-                        imageUrl: f.homeClubLogoUrl!,
-                        width: 32,
-                        height: 32,
-                        errorWidget: (c, u, e) => const Icon(Icons.shield, size: 32, color: Colors.grey),
-                      )
-                    else if (f.homeClubSlug != null)
-                      Image.asset(
-                        'assets/images/clubs/${f.homeClubSlug}.png',
-                        width: 32,
-                        height: 32,
-                        errorBuilder: (c, e, s) => const Icon(
-                          Icons.shield,
-                          size: 32,
-                          color: Colors.grey,
-                        ),
-                      )
-                    else
-                      const Icon(Icons.shield, size: 32, color: Colors.grey),
+                    ClubLogo(clubSlug: f.homeClubSlug, logoUrl: f.homeClubLogoUrl, width: 32, height: 32),
                     const SizedBox(height: 6),
                     Text(
                       f.homeClubName,
@@ -372,26 +328,7 @@ class _SuperligScreenState extends State<SuperligScreen>
                 flex: 3,
                 child: Column(
                   children: [
-                    if (f.awayClubLogoUrl != null)
-                      CachedNetworkImage(
-                        imageUrl: f.awayClubLogoUrl!,
-                        width: 32,
-                        height: 32,
-                        errorWidget: (c, u, e) => const Icon(Icons.shield, size: 32, color: Colors.grey),
-                      )
-                    else if (f.awayClubSlug != null)
-                      Image.asset(
-                        'assets/images/clubs/${f.awayClubSlug}.png',
-                        width: 32,
-                        height: 32,
-                        errorBuilder: (c, e, s) => const Icon(
-                          Icons.shield,
-                          size: 32,
-                          color: Colors.grey,
-                        ),
-                      )
-                    else
-                      const Icon(Icons.shield, size: 32, color: Colors.grey),
+                    ClubLogo(clubSlug: f.awayClubSlug, logoUrl: f.awayClubLogoUrl, width: 32, height: 32),
                     const SizedBox(height: 6),
                     Text(
                       f.awayClubName,
@@ -519,19 +456,7 @@ class _SuperligScreenState extends State<SuperligScreen>
                         : null,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: s.clubLogoUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: s.clubLogoUrl!,
-                          fit: BoxFit.contain,
-                          errorWidget: (c, u, e) =>
-                              const Icon(Icons.shield, size: 20),
-                        )
-                      : s.clubSlug != null
-                      ? Image.asset(
-                          'assets/images/clubs/${s.clubSlug}.png',
-                          fit: BoxFit.contain,
-                        )
-                      : const Icon(Icons.shield, size: 20),
+                  child: ClubLogo(clubSlug: s.clubSlug, logoUrl: s.clubLogoUrl, width: 20, height: 20, fit: BoxFit.contain),
                 ),
               );
             },
@@ -630,22 +555,7 @@ class _SuperligScreenState extends State<SuperligScreen>
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          if (t.fromClubLogoUrl != null)
-                            CachedNetworkImage(
-                              imageUrl: t.fromClubLogoUrl!,
-                              width: 16,
-                              height: 16,
-                              errorWidget: (c, u, e) =>
-                                  const Icon(Icons.shield, size: 16),
-                            )
-                          else if (t.fromClubSlug != null)
-                            Image.asset(
-                              'assets/images/clubs/${t.fromClubSlug}.png',
-                              width: 16,
-                              height: 16,
-                            )
-                          else
-                            const Icon(Icons.shield, size: 16),
+                          ClubLogo(clubSlug: t.fromClubSlug, logoUrl: t.fromClubLogoUrl, width: 16, height: 16),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
@@ -663,22 +573,7 @@ class _SuperligScreenState extends State<SuperligScreen>
                               color: Colors.grey,
                             ),
                           ),
-                          if (t.toClubLogoUrl != null)
-                            CachedNetworkImage(
-                              imageUrl: t.toClubLogoUrl!,
-                              width: 16,
-                              height: 16,
-                              errorWidget: (c, u, e) =>
-                                  const Icon(Icons.shield, size: 16),
-                            )
-                          else if (t.toClubSlug != null)
-                            Image.asset(
-                              'assets/images/clubs/${t.toClubSlug}.png',
-                              width: 16,
-                              height: 16,
-                            )
-                          else
-                            const Icon(Icons.shield, size: 16),
+                          ClubLogo(clubSlug: t.toClubSlug, logoUrl: t.toClubLogoUrl, width: 16, height: 16),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(

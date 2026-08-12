@@ -29,6 +29,7 @@ class SocketClient {
     socket = io.io(ApiConstants.baseUrl, <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': true,
+      'forceNew': true, // Add this to prevent reusing old socket connections
       if (token != null) 'auth': {'token': token},
     });
     
@@ -122,6 +123,26 @@ class SocketClient {
     socket.on('leaderboard_updated', (_) {
       callback();
     });
+  }
+
+  void offChatMessage() {
+    socket.off('chat_message');
+  }
+
+  void offAddonEvent() {
+    socket.off('addon_event');
+  }
+
+  void offPollUpdated() {
+    socket.off('poll_updated');
+  }
+
+  void offSocketError() {
+    socket.off('socket_error');
+  }
+
+  void offLeaderboardUpdated() {
+    socket.off('leaderboard_updated');
   }
 
   void dispose() {

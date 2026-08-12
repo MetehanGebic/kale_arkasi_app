@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/network/dio_client.dart';
 import '../../../core/api_constants.dart';
 
 class LeaderboardEntry {
@@ -41,7 +42,7 @@ class LeaderboardRepository {
   final Dio _dio;
   final String _baseUrl = ApiConstants.economyUrl;
 
-  LeaderboardRepository({Dio? dio}) : _dio = dio ?? Dio() {
+  LeaderboardRepository({Dio? dio}) : _dio = dio ?? DioClient.getDio() {
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);
   }

@@ -14,7 +14,7 @@ class ApiConstants {
   // --dart-define verilmezse aşağıdaki defaultValue kullanılır.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.1.37:3000',
+    defaultValue: 'https://api.kalearkasi.com',
   );
 
   static const String identityUrl = '$baseUrl/api/identity';

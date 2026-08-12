@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../../core/network/dio_client.dart';
 import '../models/superlig_models.dart';
 import '../../../../core/api_constants.dart';
 
@@ -6,7 +7,7 @@ class SuperligRepository {
   final Dio _dio;
   final String baseUrl = ApiConstants.superligUrl;
 
-  SuperligRepository({Dio? dio}) : _dio = dio ?? Dio() {
+  SuperligRepository({Dio? dio}) : _dio = dio ?? DioClient.getDio() {
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);
   }
