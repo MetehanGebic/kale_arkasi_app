@@ -30,7 +30,10 @@ class TasksCubit extends Cubit<TasksState> {
   }
 
   Future<void> completeTask(String taskId) async {
-    emit(TaskCompleting(_currentTasks, taskId));
+    if (state is TaskCompleting) return;
+    
+    final currentTasks = _currentTasks;
+    emit(TaskCompleting(currentTasks, taskId));
 
     try {
       final result = await _repository.completeTask(_token, taskId);
@@ -47,7 +50,8 @@ class TasksCubit extends Cubit<TasksState> {
     } catch (e) {
       // Hata anında da elimizdeki listeyi kaybetmeyelim.
       emit(TasksError(e.toString().replaceAll('Exception: ', '')));
-      await fetchTasks();
+      // UI hatayı okuduktan sonra ekranın boş kalmaması için eski listeye dön.
+      emit(TasksLoaded(currentTasks));
     }
   }
 }

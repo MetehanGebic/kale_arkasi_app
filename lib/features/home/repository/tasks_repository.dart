@@ -21,11 +21,11 @@ class TaskItem {
 
   factory TaskItem.fromJson(Map<String, dynamic> json) {
     return TaskItem(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      description: json['description'] as String?,
-      rewardTea: json['rewardTea'] as int,
-      actionType: json['actionType'] as String,
+      id: json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? 'Bilinmeyen Görev',
+      description: json['description']?.toString(),
+      rewardTea: json['rewardTea'] as int? ?? 0,
+      actionType: json['actionType']?.toString() ?? '',
       completedToday: json['completedToday'] as bool? ?? false,
     );
   }
@@ -36,8 +36,8 @@ class TasksRepository {
   final String _baseUrl = ApiConstants.tasksUrl;
 
   TasksRepository({Dio? dio}) : _dio = dio ?? DioClient.getDio() {
-    _dio.options.connectTimeout = const Duration(seconds: 10);
-    _dio.options.receiveTimeout = const Duration(seconds: 10);
+    _dio.options.connectTimeout = const Duration(seconds: 60);
+    _dio.options.receiveTimeout = const Duration(seconds: 60);
   }
 
   // Aktif görevleri, her biri için "bugün tamamlandı mı" bilgisiyle çeker.

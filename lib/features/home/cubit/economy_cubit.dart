@@ -24,6 +24,7 @@ class EconomyCubit extends Cubit<EconomyState> {
   }
 
   Future<void> claimDailyTea(String token) async {
+    if (state is EconomyLoading) return;
     final currentBalance = state.balance;
     final currentLastClaim = state.lastClaimTime;
     emit(EconomyLoading(currentBalance, lastClaimTime: currentLastClaim));

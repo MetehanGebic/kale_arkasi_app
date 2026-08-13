@@ -12,8 +12,8 @@ class AuthRepository {
   AuthRepository({TokenStorage? tokenStorage})
     : _dio = DioClient.getDio(),
       _tokenStorage = tokenStorage ?? TokenStorage() {
-    _dio.options.connectTimeout = const Duration(seconds: 10);
-    _dio.options.receiveTimeout = const Duration(seconds: 10);
+    _dio.options.connectTimeout = const Duration(seconds: 60);
+    _dio.options.receiveTimeout = const Duration(seconds: 60);
   }
 
   // API'den gelen takımları UI'da listelemek için

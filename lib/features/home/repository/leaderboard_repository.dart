@@ -43,8 +43,8 @@ class LeaderboardRepository {
   final String _baseUrl = ApiConstants.economyUrl;
 
   LeaderboardRepository({Dio? dio}) : _dio = dio ?? DioClient.getDio() {
-    _dio.options.connectTimeout = const Duration(seconds: 10);
-    _dio.options.receiveTimeout = const Duration(seconds: 10);
+    _dio.options.connectTimeout = const Duration(seconds: 60);
+    _dio.options.receiveTimeout = const Duration(seconds: 60);
   }
 
   // En çok çay biriktiren kullanıcıları sıralı şekilde getirir.

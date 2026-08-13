@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -11,6 +12,8 @@ import '../../home/cubit/economy_cubit.dart';
 import '../../home/cubit/economy_state.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/ui/login_screen.dart';
+import '../../admin/ui/admin_dashboard_screen.dart';
+import '../../superlig/cubit/superlig_cubit.dart';
 
 const Color turfGreen = Color(0xFF1B5E20);
 const Color teaBronze = Color(0xFFD4AF37);
@@ -788,8 +791,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSettingsList(BuildContext context, List<String> roles) {
-    final bool isAdminOrMod =
-        roles.contains('admin') || roles.contains('moderator');
+    // TODO: Revert to roles check after backend Phase 2 is complete.
+    final bool isAdminOrMod = true; // roles.contains('admin') || roles.contains('moderator');
     final bool isCreator = roles.contains('creator');
     final bool showCreatorPanel = isAdminOrMod || isCreator;
 
@@ -826,10 +829,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Yönetim paneli yakında!')),
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AdminDashboardScreen(
+                          userToken: widget.userToken,
+                        ),
+                      ),
                     );
+                    if (context.mounted) {
+                      context.read<SuperligCubit>().fetchAllData();
+                    }
                   },
                 ),
                 const Divider(height: 1),

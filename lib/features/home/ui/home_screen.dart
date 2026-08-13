@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:kale_arkasi_app/features/superlig/data/repository/superlig_repository.dart';
 import '../../../core/widgets/club_logo.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/economy_cubit.dart';
@@ -16,6 +17,8 @@ import '../../superlig/data/models/superlig_models.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../../auth/cubit/auth_state.dart';
 import '../../live_chat/ui/live_match_screen.dart';
+import '../../match_center/ui/match_detail_screen.dart';
+import '../../match_center/cubit/match_detail_cubit.dart';
 
 // -- Renk Paleti (Turf Green & Tea Bronze) --
 const Color turfGreen = Color(0xFF1B5E20);
@@ -103,12 +106,23 @@ class _HomeViewState extends State<HomeView> {
             );
           }
         },
-        child: SingleChildScrollView(
+        child: RefreshIndicator(
+          color: turfGreen,
+          onRefresh: () async {
+            context.read<SuperligCubit>().fetchAllData();
+            context.read<LeaderboardCubit>().fetchLeaderboard();
+            context.read<TasksCubit>().fetchTasks();
+            context.read<EconomyCubit>().fetchBalance(widget.userToken);
+            await Future.delayed(const Duration(milliseconds: 1000));
+          },
+          child: SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildMatchHeader(context),
+              const SizedBox(height: 16),
+              _buildLiveMatchesSection(context),
               const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -174,6 +188,7 @@ class _HomeViewState extends State<HomeView> {
               const SizedBox(height: 100), // FAB boşluğu
             ],
           ),
+        ),
         ),
       ),
       floatingActionButton: _buildFab(),
@@ -366,47 +381,6 @@ class _HomeViewState extends State<HomeView> {
                       'Günün görevlerini tamamlamayı unutma.',
                       style: TextStyle(color: Colors.white70, fontSize: 11),
                     ),
-                    const SizedBox(height: 8),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => MultiBlocProvider(
-                              providers: [
-                                BlocProvider.value(
-                                  value: context.read<EconomyCubit>(),
-                                ),
-                                BlocProvider.value(
-                                  value: context.read<TasksCubit>(),
-                                ),
-                                BlocProvider.value(
-                                  value: context.read<SuperligCubit>(),
-                                ),
-                              ],
-                              child: const LiveMatchScreen(
-                                matchId: 'match_1',
-                                homeLogo:
-                                    'https://tmssl.akamaized.net/images/wappen/normquad/3041.png',
-                                awayLogo:
-                                    'https://tmssl.akamaized.net/images/wappen/normquad/141.png',
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.forum, size: 16),
-                      label: const Text('Canlı Kahvehane (Test)'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: teaBronze,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        minimumSize: const Size(0, 30),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -479,8 +453,9 @@ class _HomeViewState extends State<HomeView> {
           String? favoriteTeamId;
 
           if (authState is AuthSuccess) {
-            favoriteTeamId =
-                authState.user['clubId'] ?? authState.user['favoriteTeamId'];
+            favoriteTeamId = authState.user['favoriteClubId'] ??
+                authState.user['clubId'] ??
+                authState.user['favoriteTeamId'];
           }
 
           var futureMatches =
@@ -492,7 +467,9 @@ class _HomeViewState extends State<HomeView> {
                 .where(
                   (f) =>
                       f.homeClubId == favoriteTeamId ||
-                      f.awayClubId == favoriteTeamId,
+                      f.awayClubId == favoriteTeamId ||
+                      f.homeClubSlug == favoriteTeamId ||
+                      f.awayClubSlug == favoriteTeamId,
                 )
                 .toList();
             if (userTeamMatches.isNotEmpty) {
@@ -560,7 +537,12 @@ class _HomeViewState extends State<HomeView> {
                 children: [
                   Column(
                     children: [
-                      ClubLogo(clubSlug: nextMatch?.homeClubSlug, logoUrl: nextMatch?.homeClubLogoUrl, width: 48, height: 48),
+                      ClubLogo(
+                        clubSlug: nextMatch?.homeClubSlug,
+                        logoUrl: nextMatch?.homeClubLogoUrl,
+                        width: 48,
+                        height: 48,
+                      ),
                       const SizedBox(height: 8),
                       SizedBox(
                         width: 80,
@@ -588,7 +570,12 @@ class _HomeViewState extends State<HomeView> {
                   ),
                   Column(
                     children: [
-                      ClubLogo(clubSlug: nextMatch?.awayClubSlug, logoUrl: nextMatch?.awayClubLogoUrl, width: 48, height: 48),
+                      ClubLogo(
+                        clubSlug: nextMatch?.awayClubSlug,
+                        logoUrl: nextMatch?.awayClubLogoUrl,
+                        width: 48,
+                        height: 48,
+                      ),
                       const SizedBox(height: 8),
                       SizedBox(
                         width: 80,
@@ -664,8 +651,6 @@ class _HomeViewState extends State<HomeView> {
       },
     );
   }
-
-
 
   Widget _buildTasksSection(BuildContext context) {
     return BlocBuilder<TasksCubit, TasksState>(
@@ -1106,4 +1091,277 @@ class _HomeViewState extends State<HomeView> {
     if (intVal == null) return null;
     return Color(intVal);
   }
+
+  Widget _buildLiveMatchesSection(BuildContext context) {
+    return BlocBuilder<SuperligCubit, SuperligState>(
+      builder: (context, state) {
+        if (state is SuperligLoading || state is SuperligInitial) {
+          return const Center(
+            child: CircularProgressIndicator(color: turfGreen),
+          );
+        }
+
+        if (state is! SuperligLoaded) return const SizedBox.shrink();
+
+        final matches = state.liveMatches;
+        if (matches.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Canlı Kahvehane',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: turfGreen,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.circle, color: Colors.red, size: 8),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${matches.length} Maç',
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: matches.length,
+              itemBuilder: (context, index) {
+                final match = matches[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: match.isChatEnabled
+                            ? teaBronze.withValues(alpha: 0.5)
+                            : Colors.grey.shade200,
+                        width: match.isChatEnabled ? 2 : 1,
+                      ),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          if (match.isChatEnabled) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MultiBlocProvider(
+                                  providers: [
+                                    BlocProvider.value(
+                                      value: context.read<EconomyCubit>(),
+                                    ),
+                                    BlocProvider.value(
+                                      value: context.read<TasksCubit>(),
+                                    ),
+                                    BlocProvider.value(
+                                      value: context.read<SuperligCubit>(),
+                                    ),
+                                  ],
+                                  child: LiveMatchScreen(
+                                    matchId: match.id,
+                                    homeLogo: match.homeLogo,
+                                    awayLogo: match.awayLogo,
+                                  ),
+                                ),
+                              ),
+                            );
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BlocProvider(
+                                  create: (context) => MatchDetailCubit(
+                                    SuperligRepository(),
+                                  ),
+                                  child: MatchDetailScreen(match: match),
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    match.tournamentName,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (match.status == 'live')
+                                    Text(
+                                      match.minute != null
+                                          ? '${match.minute}\''
+                                          : 'Canlı',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  else if (match.status == 'finished')
+                                    const Text(
+                                      'MS',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.black54,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                               Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Image.network(
+                                            match.homeLogo,
+                                            width: 32,
+                                            height: 32,
+                                            errorBuilder: (c, e, s) =>
+                                                const Icon(Icons.shield),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            match.homeTeam,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      '${match.homeScore} - ${match.awayScore}',
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                        color: turfGreen,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Image.network(
+                                            match.awayLogo,
+                                            width: 32,
+                                            height: 32,
+                                            errorBuilder: (c, e, s) =>
+                                                const Icon(Icons.shield),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            match.awayTeam,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: match.isChatEnabled
+                                      ? teaBronze
+                                      : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  match.isChatEnabled
+                                      ? 'Kahvehaneye Gir'
+                                      : 'Maç Merkezi',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: match.isChatEnabled
+                                        ? Colors.white
+                                        : Colors.black87,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
 }

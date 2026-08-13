@@ -7,8 +7,8 @@ class EconomyRepository {
   final String baseUrl = ApiConstants.economyUrl;
 
   EconomyRepository({Dio? dio}) : _dio = dio ?? DioClient.getDio() {
-    _dio.options.connectTimeout = const Duration(seconds: 10);
-    _dio.options.receiveTimeout = const Duration(seconds: 10);
+    _dio.options.connectTimeout = const Duration(seconds: 60);
+    _dio.options.receiveTimeout = const Duration(seconds: 60);
   }
 
   Future<Map<String, dynamic>> claimDailyTea(String token) async {

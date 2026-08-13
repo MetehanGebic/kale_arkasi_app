@@ -46,16 +46,16 @@ class StandingsEntry {
       goalsAgainst: json['goalsAgainst'],
       goalDiff: json['goalDiff'],
       points: json['points'],
-      clubName: json['club']['name'],
-      clubLogoUrl: json['club']['logoUrl'],
-      clubSlug: json['club']['slug'],
-      clubPrimaryColor: json['club']['primaryColor'],
-      coachName: json['club']['coachName'],
-      totalMarketValue: json['club']['totalMarketValue'],
-      players: json['club']['players'] != null
+      clubName: json['club']?['name'] ?? 'Bilinmiyor',
+      clubLogoUrl: json['club']?['logoUrl'],
+      clubSlug: json['club']?['slug'],
+      clubPrimaryColor: json['club']?['primaryColor'],
+      coachName: json['club']?['coachName'],
+      totalMarketValue: json['club']?['totalMarketValue'],
+      players: json['club']?['players'] != null
           ? (json['club']['players'] as List)
-              .map((p) => Player.fromJson(p))
-              .toList()
+                .map((p) => Player.fromJson(p))
+                .toList()
           : [],
     );
   }
@@ -121,16 +121,18 @@ class Fixture {
 
   factory Fixture.fromJson(Map<String, dynamic> json) {
     return Fixture(
-      week: json['week'],
-      matchDate: DateTime.parse(json['matchDate']).toLocal(),
-      homeClubId: json['homeClub']['id'],
-      homeClubName: json['homeClub']['name'],
-      homeClubLogoUrl: json['homeClub']['logoUrl'],
-      homeClubSlug: json['homeClub']['slug'],
-      awayClubId: json['awayClub']['id'],
-      awayClubName: json['awayClub']['name'],
-      awayClubLogoUrl: json['awayClub']['logoUrl'],
-      awayClubSlug: json['awayClub']['slug'],
+      week: json['week'] ?? 0,
+      matchDate: json['matchDate'] != null
+          ? DateTime.tryParse(json['matchDate'])?.toLocal() ?? DateTime.now()
+          : DateTime.now(),
+      homeClubId: json['homeClub']?['id'],
+      homeClubName: json['homeClub']?['name'] ?? 'Bilinmiyor',
+      homeClubLogoUrl: json['homeClub']?['logoUrl'],
+      homeClubSlug: json['homeClub']?['slug'],
+      awayClubId: json['awayClub']?['id'],
+      awayClubName: json['awayClub']?['name'] ?? 'Bilinmiyor',
+      awayClubLogoUrl: json['awayClub']?['logoUrl'],
+      awayClubSlug: json['awayClub']?['slug'],
       homeScore: json['homeScore'],
       awayScore: json['awayScore'],
     );
@@ -188,13 +190,133 @@ class Transfer {
       playerName: json['playerName'],
       playerPhotoUrl: json['playerPhotoUrl'],
       // Eğer fromClub varsa (bizim db) onu kullan, yoksa fromClubName kullan
-      fromClubName: json['fromClub'] != null ? json['fromClub']['name'] : json['fromClubName'],
-      fromClubLogoUrl: json['fromClub'] != null ? json['fromClub']['logoUrl'] : json['fromClubLogoUrl'],
+      fromClubName: json['fromClub'] != null
+          ? json['fromClub']['name']
+          : json['fromClubName'],
+      fromClubLogoUrl: json['fromClub'] != null
+          ? json['fromClub']['logoUrl']
+          : json['fromClubLogoUrl'],
       fromClubSlug: json['fromClub'] != null ? json['fromClub']['slug'] : null,
-      toClubName: json['toClub'] != null ? json['toClub']['name'] : json['toClubName'],
-      toClubLogoUrl: json['toClub'] != null ? json['toClub']['logoUrl'] : json['toClubLogoUrl'],
+      toClubName: json['toClub'] != null
+          ? json['toClub']['name']
+          : json['toClubName'],
+      toClubLogoUrl: json['toClub'] != null
+          ? json['toClub']['logoUrl']
+          : json['toClubLogoUrl'],
       toClubSlug: json['toClub'] != null ? json['toClub']['slug'] : null,
       feeType: json['feeType'],
+    );
+  }
+}
+
+class LiveMatch {
+  final String id;
+  final int tournamentId;
+  final String tournamentName;
+  final String status;
+  final String homeTeam;
+  final String awayTeam;
+  final String homeLogo;
+  final String awayLogo;
+  final int homeScore;
+  final int awayScore;
+  final int? minute;
+  final bool isChatEnabled;
+  final int? startTimestamp;
+
+  LiveMatch({
+    required this.id,
+    required this.tournamentId,
+    required this.tournamentName,
+    required this.status,
+    required this.homeTeam,
+    required this.awayTeam,
+    required this.homeLogo,
+    required this.awayLogo,
+    required this.homeScore,
+    required this.awayScore,
+    this.minute,
+    required this.isChatEnabled,
+    this.startTimestamp,
+  });
+
+  factory LiveMatch.fromJson(Map<String, dynamic> json) {
+    return LiveMatch(
+      id: json['id'],
+      tournamentId: json['tournamentId'],
+      tournamentName: json['tournamentName'],
+      status: json['status'],
+      homeTeam: json['homeTeam'],
+      awayTeam: json['awayTeam'],
+      homeLogo: json['homeLogo'],
+      awayLogo: json['awayLogo'],
+      homeScore: json['homeScore'] ?? 0,
+      awayScore: json['awayScore'] ?? 0,
+      minute: json['minute'],
+      isChatEnabled: json['isChatEnabled'] ?? false,
+      startTimestamp: json['startTimestamp'],
+    );
+  }
+}
+
+class MatchComment {
+  final String id;
+  final String matchId;
+  final String userId;
+  final String content;
+  final DateTime createdAt;
+  final String username;
+  final String? avatarUrl;
+  final String? favoriteClubId;
+  final bool isSystem;
+  final String? incidentId;
+
+  MatchComment({
+    required this.id,
+    required this.matchId,
+    required this.userId,
+    required this.content,
+    required this.createdAt,
+    required this.username,
+    this.avatarUrl,
+    this.favoriteClubId,
+    this.isSystem = false,
+    this.incidentId,
+  });
+
+  factory MatchComment.fromJson(Map<String, dynamic> json) {
+    return MatchComment(
+      id: json['id']?.toString() ?? '',
+      matchId: json['matchId']?.toString() ?? '',
+      userId: json['userId']?.toString() ?? '',
+      content: json['content']?.toString() ?? '',
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+                DateTime.now()
+          : DateTime.now(),
+      username: json['user']?['username'] as String? ?? 'Kullanıcı',
+      avatarUrl: json['user']?['avatarUrl'] as String?,
+      favoriteClubId: json['user']?['favoriteClubId'] as String?,
+      isSystem: json['isSystem'] == true || json['role'] == 'BOT',
+      incidentId: json['incidentId']?.toString(),
+    );
+  }
+}
+
+class MatchDetailsData {
+  final Map<String, dynamic>? lineups;
+  final Map<String, dynamic>? statistics;
+  final Map<String, dynamic>? incidents;
+  final Map<String, dynamic>? event;
+
+  MatchDetailsData({this.lineups, this.statistics, this.incidents, this.event});
+
+  factory MatchDetailsData.fromJson(Map<String, dynamic> json) {
+    return MatchDetailsData(
+      lineups: json['lineups'] as Map<String, dynamic>?,
+      statistics: json['statistics'] as Map<String, dynamic>?,
+      incidents: json['incidents'] as Map<String, dynamic>?,
+      event: json['event'] as Map<String, dynamic>?,
     );
   }
 }

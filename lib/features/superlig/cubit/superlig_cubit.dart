@@ -15,6 +15,7 @@ class SuperligCubit extends Cubit<SuperligState> {
       final fixtures = await repository.getFixtures();
       final topScorers = await repository.getTopScorers();
       final transfers = await repository.getTransfers();
+      final liveMatches = await repository.getLiveMatches();
       
       if (!isClosed) {
         emit(SuperligLoaded(
@@ -22,6 +23,7 @@ class SuperligCubit extends Cubit<SuperligState> {
           fixtures: fixtures,
           topScorers: topScorers,
           transfers: transfers,
+          liveMatches: liveMatches,
         ));
       }
     } catch (e) {

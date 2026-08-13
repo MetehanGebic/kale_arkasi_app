@@ -7,6 +7,8 @@ import 'package:confetti/confetti.dart';
 import '../../../core/network/socket_client.dart';
 import '../../home/cubit/economy_cubit.dart';
 import '../../home/cubit/economy_state.dart';
+import '../../superlig/data/repository/superlig_repository.dart';
+import '../../superlig/cubit/superlig_cubit.dart';
 
 const Color turfGreen = Color(0xFF1B5E20);
 const Color teaBronze = Color(0xFFD4AF37);
@@ -77,6 +79,8 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     _tabController.addListener(() {
       setState(() {}); // Rebuild UI for dynamic colors
     });
+
+    _loadOldComments();
 
     // Bağlan ve olayları dinle
     SocketClient().joinMatch(widget.matchId);
@@ -156,11 +160,35 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     });
   }
 
+  Future<void> _loadOldComments() async {
+    try {
+      final repo = context.read<SuperligCubit>().repository;
+      final comments = await repo.getMatchComments(widget.matchId);
+      if (mounted) {
+        setState(() {
+          // comments are returned desc from backend, we need asc (oldest first) for chat
+          for (var c in comments.reversed) {
+            _messages.add({
+              'sender': c.username,
+              'isBot': c.isSystem,
+              'message': c.content,
+              'team': c.isSystem ? 'system' : 'neutral', // simplified
+              'isCapo': false,
+            });
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Eski mesajlar yüklenirken hata: \$e");
+    }
+  }
+
   @override
   void dispose() {
     SocketClient().offChatMessage();
     SocketClient().offPollUpdated();
     SocketClient().offAddonEvent();
+    SocketClient().offSocketError();
     SocketClient().leaveMatch(widget.matchId);
     
     _pollTimer?.cancel();
@@ -224,7 +252,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/cay.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon('match_1', 'cay');
+                        SocketClient().buyAddon(widget.matchId, 'cay');
                       },
                     ),
                     _buildStoreItem(
@@ -234,7 +262,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/capo.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon('match_1', 'capo');
+                        SocketClient().buyAddon(widget.matchId, 'capo');
                       },
                     ),
                     _buildStoreItem(
@@ -244,7 +272,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/madde.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon('match_1', 'madde');
+                        SocketClient().buyAddon(widget.matchId, 'madde');
                       },
                     ),
                     _buildStoreItem(
@@ -254,7 +282,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/mesale.gif',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon('match_1', 'mesale');
+                        SocketClient().buyAddon(widget.matchId, 'mesale');
                       },
                     ),
                     _buildStoreItem(
@@ -264,7 +292,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/cekirdek.gif',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon('match_1', 'cekirdek');
+                        SocketClient().buyAddon(widget.matchId, 'cekirdek');
                       },
                     ),
                     _buildStoreItem(
@@ -274,7 +302,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/davul.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon('match_1', 'davul');
+                        SocketClient().buyAddon(widget.matchId, 'davul');
                       },
                     ),
                     _buildStoreItem(
@@ -294,7 +322,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/gozluk.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon('match_1', 'gozluk');
+                        SocketClient().buyAddon(widget.matchId, 'gozluk');
                       },
                     ),
                     _buildStoreItem(
@@ -304,7 +332,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/kufur.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon('match_1', 'kufur');
+                        SocketClient().buyAddon(widget.matchId, 'kufur');
                       },
                     ),
                   ],
@@ -351,7 +379,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       );
                     } else {
                       SocketClient().buyAddon(
-                        'match_1',
+                        widget.matchId,
                         'red_card',
                         target: user,
                       );
@@ -469,7 +497,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
       if (sendAsCapo) {
         setState(() => _capoMessagesLeft--);
       }
-      SocketClient().sendMessage('match_1', text, isCapo: sendAsCapo);
+      SocketClient().sendMessage(widget.matchId, text, isCapo: sendAsCapo);
     } else {
       // Local fallbacks or prediction cards
       String? asset = storeAsset;
@@ -936,10 +964,33 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
 
   Widget _buildMessageBubble(Map<String, dynamic> msg, String currentRoom) {
     final bool isBot = msg['isBot'] ?? false;
+    final bool isSystem = msg['isSystem'] ?? false;
     final bool isTeaGift = msg['isTeaGift'] ?? false;
     final bool isMatchEvent = msg['isMatchEvent'] ?? false;
     final bool isCapo = msg['isCapo'] ?? false;
     final String team = msg['team'] ?? 'neutral';
+
+    if (isSystem) {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Center(
+          child: Text(
+            msg['text'] ?? '',
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
 
     Color borderColor = Colors.grey;
     if (team == 'home') borderColor = Colors.red; // Çorum mock color
@@ -1193,19 +1244,19 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     Color iconColor = activeColor.computeLuminance() > 0.5
         ? Colors.black87
         : Colors.white;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
         child: Row(
           children: [
             Column(

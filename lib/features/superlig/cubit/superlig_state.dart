@@ -16,16 +16,18 @@ class SuperligLoaded extends SuperligState {
   final List<Fixture> fixtures;
   final List<TopScorer> topScorers;
   final List<Transfer> transfers;
+  final List<LiveMatch> liveMatches;
 
   const SuperligLoaded({
     required this.standings,
     required this.fixtures,
     required this.topScorers,
     required this.transfers,
+    required this.liveMatches,
   });
 
   @override
-  List<Object?> get props => [standings, fixtures, topScorers, transfers];
+  List<Object?> get props => [standings, fixtures, topScorers, transfers, liveMatches];
 }
 
 class SuperligError extends SuperligState {
