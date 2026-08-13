@@ -60,18 +60,20 @@ class SocketClient {
     socket.emit('leave_match', matchId);
   }
 
-  void sendMessage(String matchId, String text, {bool isCapo = false}) {
+  void sendMessage(String matchId, String text, {bool isCapo = false, String roomType = 'neutral'}) {
     socket.emit('send_message', {
       'matchId': matchId,
       'text': text,
       'isCapo': isCapo,
+      'roomType': roomType,
     });
   }
 
-  void buyAddon(String matchId, String type, {String? target}) {
+  void buyAddon(String matchId, String type, {String? target, String roomType = 'neutral'}) {
     final payload = <String, dynamic>{
       'matchId': matchId,
       'type': type,
+      'roomType': roomType,
     };
     if (target != null) {
       payload['target'] = target;

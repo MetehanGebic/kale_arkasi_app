@@ -14,8 +14,6 @@ import '../../../core/network/socket_client.dart';
 import '../../superlig/cubit/superlig_cubit.dart';
 import '../../superlig/cubit/superlig_state.dart';
 import '../../superlig/data/models/superlig_models.dart';
-import '../../auth/cubit/auth_cubit.dart';
-import '../../auth/cubit/auth_state.dart';
 import '../../live_chat/ui/live_match_screen.dart';
 import '../../match_center/ui/match_detail_screen.dart';
 import '../../match_center/cubit/match_detail_cubit.dart';
@@ -34,6 +32,8 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
+  int? _expandedTournamentId;
+
   @override
   void initState() {
     super.initState();
@@ -116,79 +116,79 @@ class _HomeViewState extends State<HomeView> {
             await Future.delayed(const Duration(milliseconds: 1000));
           },
           child: SingleChildScrollView(
-          physics: const ClampingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildMatchHeader(context),
-              const SizedBox(height: 16),
-              _buildLiveMatchesSection(context),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: _buildUserDashboard(context),
-              ),
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: const Text(
-                  'Günün Görevleri',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: turfGreen,
+            physics: const ClampingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildMatchHeader(context),
+                const SizedBox(height: 16),
+                _buildLiveMatchesSection(context),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: _buildUserDashboard(context),
+                ),
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: const Text(
+                    'Günün Görevleri',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: turfGreen,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _buildTasksSection(context),
-              const SizedBox(height: 32),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Tiryakiler',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: turfGreen,
+                const SizedBox(height: 12),
+                _buildTasksSection(context),
+                const SizedBox(height: 32),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Tiryakiler',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: turfGreen,
+                        ),
                       ),
-                    ),
-                    Icon(Icons.emoji_events, color: teaBronze, size: 24),
-                  ],
+                      Icon(Icons.emoji_events, color: teaBronze, size: 24),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: _buildLeaderboardCard(context),
-              ),
-              const SizedBox(height: 32),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Son Transferler',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: turfGreen,
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: _buildLeaderboardCard(context),
+                ),
+                const SizedBox(height: 32),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Son Transferler',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: turfGreen,
+                        ),
                       ),
-                    ),
-                    Icon(Icons.swap_horiz, color: teaBronze, size: 24),
-                  ],
+                      Icon(Icons.swap_horiz, color: teaBronze, size: 24),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _buildTransfersShowcase(context),
-              const SizedBox(height: 100), // FAB boşluğu
-            ],
+                const SizedBox(height: 12),
+                _buildTransfersShowcase(context),
+                const SizedBox(height: 100), // FAB boşluğu
+              ],
+            ),
           ),
-        ),
         ),
       ),
       floatingActionButton: _buildFab(),
@@ -449,13 +449,24 @@ class _HomeViewState extends State<HomeView> {
         Fixture? nextMatch;
         if (state is SuperligLoaded) {
           final now = DateTime.now();
-          final authState = context.read<AuthCubit>().state;
           String? favoriteTeamId;
 
-          if (authState is AuthSuccess) {
-            favoriteTeamId = authState.user['favoriteClubId'] ??
-                authState.user['clubId'] ??
-                authState.user['favoriteTeamId'];
+          try {
+            if (widget.userToken.isNotEmpty) {
+              final parts = widget.userToken.split('.');
+              if (parts.length == 3) {
+                final payload = parts[1];
+                final normalized = base64Url.normalize(payload);
+                final decoded = utf8.decode(base64Url.decode(normalized));
+                final map = json.decode(decoded);
+                favoriteTeamId =
+                    map['favoriteClubId'] ??
+                    map['clubId'] ??
+                    map['favoriteTeamId'];
+              }
+            }
+          } catch (e) {
+            // ignore
           }
 
           var futureMatches =
@@ -1106,6 +1117,33 @@ class _HomeViewState extends State<HomeView> {
         final matches = state.liveMatches;
         if (matches.isEmpty) return const SizedBox.shrink();
 
+        // 1. Gruplama
+        Map<int, List<LiveMatch>> groupedMatches = {};
+        for (var match in matches) {
+          groupedMatches.putIfAbsent(match.tournamentId, () => []).add(match);
+        }
+
+        // 2. Düzleştirme (Flattening)
+        List<dynamic> horizontalItems = [];
+        for (var entry in groupedMatches.entries) {
+          final tId = entry.key;
+          final tMatches = entry.value;
+          final tName = tMatches.first.tournamentName;
+
+          // Lig Logosu objesi
+          horizontalItems.add({
+            'type': 'tournament',
+            'id': tId,
+            'name': tName,
+            'matchCount': tMatches.length,
+          });
+
+          // Eğer açıksa maçları da ekle
+          if (_expandedTournamentId == tId) {
+            horizontalItems.addAll(tMatches);
+          }
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1150,15 +1188,101 @@ class _HomeViewState extends State<HomeView> {
               ),
             ),
             const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: matches.length,
-              itemBuilder: (context, index) {
-                final match = matches[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
+            SizedBox(
+              height: 160,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: horizontalItems.length,
+                itemBuilder: (context, index) {
+                  final item = horizontalItems[index];
+
+                  // Eğer turnuva logosu ise
+                  if (item is Map) {
+                    final tId = item['id'] as int;
+                    final isExpanded = _expandedTournamentId == tId;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (isExpanded) {
+                            _expandedTournamentId = null;
+                          } else {
+                            _expandedTournamentId = tId;
+                          }
+                        });
+                      },
+                      child: Container(
+                        width: 100,
+                        margin: const EdgeInsets.only(right: 12, bottom: 4),
+                        decoration: BoxDecoration(
+                          color: isExpanded ? teaBronze.withValues(alpha: 0.1) : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                          border: Border.all(
+                            color: isExpanded ? teaBronze : Colors.grey.shade200,
+                            width: isExpanded ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: ClubLogo(
+                                clubSlug: null,
+                                logoUrl: 'https://api.sofascore.app/api/v1/unique-tournament/$tId/image',
+                                width: 48,
+                                height: 48,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                              child: Text(
+                                item['name'],
+                                maxLines: 2,
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${item['matchCount']} Maç',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red.shade700,
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  // Eğer maç objesi ise
+                  final match = item as LiveMatch;
+                  return Container(
+                    width: 280,
+                    margin: const EdgeInsets.only(right: 12, bottom: 4),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
@@ -1200,8 +1324,15 @@ class _HomeViewState extends State<HomeView> {
                                   ],
                                   child: LiveMatchScreen(
                                     matchId: match.id,
+                                    homeTeam: match.homeTeam,
+                                    awayTeam: match.awayTeam,
                                     homeLogo: match.homeLogo,
                                     awayLogo: match.awayLogo,
+                                    homeScore: match.homeScore,
+                                    awayScore: match.awayScore,
+                                    minute: match.minute,
+                                    status:
+                                        null, // Depending on status if needed
                                   ),
                                 ),
                               ),
@@ -1211,9 +1342,8 @@ class _HomeViewState extends State<HomeView> {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => BlocProvider(
-                                  create: (context) => MatchDetailCubit(
-                                    SuperligRepository(),
-                                  ),
+                                  create: (context) =>
+                                      MatchDetailCubit(SuperligRepository()),
                                   child: MatchDetailScreen(match: match),
                                 ),
                               ),
@@ -1260,72 +1390,70 @@ class _HomeViewState extends State<HomeView> {
                                 ],
                               ),
                               const SizedBox(height: 8),
-                               Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Image.network(
-                                            match.homeLogo,
-                                            width: 32,
-                                            height: 32,
-                                            errorBuilder: (c, e, s) =>
-                                                const Icon(Icons.shield),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        ClubLogo(
+                                          clubSlug: ClubLogo.getSlugFromName(match.homeTeam),
+                                          logoUrl: match.homeLogo,
+                                          width: 32,
+                                          height: 32,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          match.homeTeam,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            match.homeTeam,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      '${match.homeScore} - ${match.awayScore}',
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w900,
-                                        color: turfGreen,
-                                      ),
+                                  ),
+                                  Text(
+                                    '${match.homeScore} - ${match.awayScore}',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      color: turfGreen,
                                     ),
-                                    Expanded(
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Image.network(
-                                            match.awayLogo,
-                                            width: 32,
-                                            height: 32,
-                                            errorBuilder: (c, e, s) =>
-                                                const Icon(Icons.shield),
+                                  ),
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        ClubLogo(
+                                          clubSlug: ClubLogo.getSlugFromName(match.awayTeam),
+                                          logoUrl: match.awayLogo,
+                                          width: 32,
+                                          height: 32,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          match.awayTeam,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            match.awayTeam,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 12),
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -1359,9 +1487,10 @@ class _HomeViewState extends State<HomeView> {
                   );
                 },
               ),
-            ],
-          );
-        },
-      );
-    }
+            ),
+          ],
+        );
+      },
+    );
+  }
 }

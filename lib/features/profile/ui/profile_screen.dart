@@ -793,8 +793,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildSettingsList(BuildContext context, List<String> roles) {
     // TODO: Revert to roles check after backend Phase 2 is complete.
     final bool isAdminOrMod = true; // roles.contains('admin') || roles.contains('moderator');
-    final bool isCreator = roles.contains('creator');
-    final bool showCreatorPanel = isAdminOrMod || isCreator;
+    // final bool isCreator = roles.contains('creator');
+    final bool showCreatorPanel = isAdminOrMod; // || isCreator;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),

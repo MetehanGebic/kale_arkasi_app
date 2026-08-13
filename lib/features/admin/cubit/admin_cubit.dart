@@ -18,16 +18,15 @@ class AdminCubit extends Cubit<AdminState> {
     }
   }
 
-  Future<void> addTrackedMatch(String url) async {
+  Future<void> addTrackedMatch(String url, {String? homeLogoUrl, String? awayLogoUrl}) async {
     try {
       if (state is AdminLoaded) {
-        final currentState = state as AdminLoaded;
         // İsteğe bağlı optimistic update veya loading overlay yapılabilir
-        await _repository.addTrackedMatch(_token, url);
+        await _repository.addTrackedMatch(_token, url, homeLogoUrl: homeLogoUrl, awayLogoUrl: awayLogoUrl);
         // Refresh
         await fetchTrackedMatches();
       } else {
-        await _repository.addTrackedMatch(_token, url);
+        await _repository.addTrackedMatch(_token, url, homeLogoUrl: homeLogoUrl, awayLogoUrl: awayLogoUrl);
         await fetchTrackedMatches();
       }
     } catch (e) {

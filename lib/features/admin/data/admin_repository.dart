@@ -19,10 +19,14 @@ class AdminRepository {
     return List<Map<String, dynamic>>.from(response.data['data']);
   }
 
-  Future<Map<String, dynamic>> addTrackedMatch(String token, String url) async {
+  Future<Map<String, dynamic>> addTrackedMatch(String token, String url, {String? homeLogoUrl, String? awayLogoUrl}) async {
     final response = await _dio.post(
       '$baseUrl/api/admin/tracked-matches',
-      data: {'url': url},
+      data: {
+        'url': url,
+        if (homeLogoUrl != null && homeLogoUrl.isNotEmpty) 'homeLogoUrl': homeLogoUrl,
+        if (awayLogoUrl != null && awayLogoUrl.isNotEmpty) 'awayLogoUrl': awayLogoUrl,
+      },
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
     return response.data['data'];

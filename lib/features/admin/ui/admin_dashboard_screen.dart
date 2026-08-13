@@ -28,18 +28,26 @@ class _AdminDashboardView extends StatefulWidget {
 
 class _AdminDashboardViewState extends State<_AdminDashboardView> {
   final TextEditingController _linkController = TextEditingController();
+  final TextEditingController _homeLogoController = TextEditingController();
+  final TextEditingController _awayLogoController = TextEditingController();
 
   @override
   void dispose() {
     _linkController.dispose();
+    _homeLogoController.dispose();
+    _awayLogoController.dispose();
     super.dispose();
   }
 
   void _addMatch(BuildContext context) {
     final link = _linkController.text.trim();
     if (link.isEmpty) return;
-    context.read<AdminCubit>().addTrackedMatch(link);
+    final homeLogo = _homeLogoController.text.trim();
+    final awayLogo = _awayLogoController.text.trim();
+    context.read<AdminCubit>().addTrackedMatch(link, homeLogoUrl: homeLogo, awayLogoUrl: awayLogo);
     _linkController.clear();
+    _homeLogoController.clear();
+    _awayLogoController.clear();
   }
 
   void _removeMatch(BuildContext context, String id) {
@@ -95,6 +103,38 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                     fillColor: Colors.white,
                     prefixIcon: const Icon(Icons.link),
                   ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _homeLogoController,
+                        decoration: InputDecoration(
+                          hintText: 'Ev Sahibi Logo URL (İsteğe Bağlı)',
+                          hintStyle: const TextStyle(fontSize: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          prefixIcon: const Icon(Icons.image),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _awayLogoController,
+                        decoration: InputDecoration(
+                          hintText: 'Deplasman Logo URL (İsteğe Bağlı)',
+                          hintStyle: const TextStyle(fontSize: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          prefixIcon: const Icon(Icons.image),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(

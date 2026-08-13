@@ -7,8 +7,10 @@ import 'package:confetti/confetti.dart';
 import '../../../core/network/socket_client.dart';
 import '../../home/cubit/economy_cubit.dart';
 import '../../home/cubit/economy_state.dart';
-import '../../superlig/data/repository/superlig_repository.dart';
 import '../../superlig/cubit/superlig_cubit.dart';
+import '../../superlig/cubit/superlig_state.dart';
+import '../../auth/cubit/auth_cubit.dart';
+import '../../auth/cubit/auth_state.dart';
 
 const Color turfGreen = Color(0xFF1B5E20);
 const Color teaBronze = Color(0xFFD4AF37);
@@ -21,14 +23,22 @@ class LiveMatchScreen extends StatefulWidget {
   final String awayTeam;
   final String? homeLogo;
   final String? awayLogo;
+  final int homeScore;
+  final int awayScore;
+  final int? minute;
+  final String? status;
 
   const LiveMatchScreen({
     super.key,
     required this.matchId,
-    this.homeTeam = 'Çorum FK',
-    this.awayTeam = 'Galatasaray',
+    required this.homeTeam,
+    required this.awayTeam,
     this.homeLogo,
     this.awayLogo,
+    this.homeScore = 0,
+    this.awayScore = 0,
+    this.minute,
+    this.status,
   });
 
   @override
@@ -56,19 +66,53 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
   ];
 
   final Map<String, dynamic> _pinnedMessage = {
-    'sender': 'Ahmet',
-    'message': 'Saldır Çorum FK!',
-    'team': 'home',
+    'sender': 'Sistem',
+    'message': 'Maç Başlıyor! Küfürsüz ve saygılı bir sohbet dileriz.',
+    'team': 'system',
   };
 
   // Live Data for messages
   final List<Map<String, dynamic>> _messages = [];
 
+  Color _homeColor = Colors.red.shade700;
+  Color _awayColor = Colors.orange.shade800;
+
+  void _resolveTeamColors() {
+    final state = context.read<SuperligCubit>().state;
+    if (state is SuperligLoaded) {
+      try {
+        final homeClub = state.standings.firstWhere((s) => s.clubName.toLowerCase() == widget.homeTeam.toLowerCase());
+        if (homeClub.clubPrimaryColor != null) {
+          _homeColor = _parseColor(homeClub.clubPrimaryColor!);
+        }
+      } catch (_) {}
+      try {
+        final awayClub = state.standings.firstWhere((s) => s.clubName.toLowerCase() == widget.awayTeam.toLowerCase());
+        if (awayClub.clubPrimaryColor != null) {
+          _awayColor = _parseColor(awayClub.clubPrimaryColor!);
+        }
+      } catch (_) {}
+    }
+  }
+
+  Color _parseColor(String hexString) {
+    try {
+      final buffer = StringBuffer();
+      if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
+      buffer.write(hexString.replaceFirst('#', ''));
+      return Color(int.parse(buffer.toString(), radix: 16));
+    } catch (_) {
+      return Colors.grey;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _confettiController =
-        ConfettiController(duration: const Duration(seconds: 3));
+    _resolveTeamColors();
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
 
     _pollTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) setState(() {});
@@ -107,7 +151,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
             'sender': data['sender'],
             'isBot': data['isSystem'] ?? false,
             'message': data['text'],
-            'team': data['isSystem'] == true ? 'system' : 'neutral',
+            'team': data['isSystem'] == true ? 'system' : (data['team'] ?? 'neutral'),
             'isCapo': data['isCapo'] ?? false,
             'isTeaGift': false,
             'isPredictionCard': false,
@@ -129,7 +173,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
             _redCardHistory[data['target']] = true;
           });
         }
-        
+
         String? asset = data['storeAsset'];
         if (asset != null) {
           asset = asset.replaceAll('mesale.png', 'mesale.gif');
@@ -142,7 +186,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
             'sender': data['sender'],
             'isBot': data['isSystem'] ?? false,
             'message': data['text'],
-            'team': 'system',
+            'team': data['team'] ?? 'system',
             'isCapo': false,
             'isTeaGift': type == 'cay',
             'storeAsset': asset,
@@ -190,7 +234,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     SocketClient().offAddonEvent();
     SocketClient().offSocketError();
     SocketClient().leaveMatch(widget.matchId);
-    
+
     _pollTimer?.cancel();
     _confettiController.dispose();
     _tabController.dispose();
@@ -252,7 +296,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/cay.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'cay');
+                        SocketClient().buyAddon(widget.matchId, 'cay', roomType: _getCurrentRoomType());
                       },
                     ),
                     _buildStoreItem(
@@ -262,7 +306,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/capo.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'capo');
+                        SocketClient().buyAddon(widget.matchId, 'capo', roomType: _getCurrentRoomType());
                       },
                     ),
                     _buildStoreItem(
@@ -272,7 +316,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/madde.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'madde');
+                        SocketClient().buyAddon(widget.matchId, 'madde', roomType: _getCurrentRoomType());
                       },
                     ),
                     _buildStoreItem(
@@ -282,7 +326,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/mesale.gif',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'mesale');
+                        SocketClient().buyAddon(widget.matchId, 'mesale', roomType: _getCurrentRoomType());
                       },
                     ),
                     _buildStoreItem(
@@ -292,7 +336,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/cekirdek.gif',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'cekirdek');
+                        SocketClient().buyAddon(widget.matchId, 'cekirdek', roomType: _getCurrentRoomType());
                       },
                     ),
                     _buildStoreItem(
@@ -302,7 +346,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/davul.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'davul');
+                        SocketClient().buyAddon(widget.matchId, 'davul', roomType: _getCurrentRoomType());
                       },
                     ),
                     _buildStoreItem(
@@ -322,7 +366,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/gozluk.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'gozluk');
+                        SocketClient().buyAddon(widget.matchId, 'gozluk', roomType: _getCurrentRoomType());
                       },
                     ),
                     _buildStoreItem(
@@ -332,7 +376,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/kufur.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'kufur');
+                        SocketClient().buyAddon(widget.matchId, 'kufur', roomType: _getCurrentRoomType());
                       },
                     ),
                   ],
@@ -358,7 +402,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
-            physics: const ClampingScrollPhysics(),
+              physics: const ClampingScrollPhysics(),
               shrinkWrap: true,
               itemCount: _activeUsers.length,
               itemBuilder: (c, i) {
@@ -382,6 +426,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                         widget.matchId,
                         'red_card',
                         target: user,
+                        roomType: _getCurrentRoomType(),
                       );
                     }
                   },
@@ -476,6 +521,12 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     );
   }
 
+  String _getCurrentRoomType() {
+    if (_tabController.index == 0) return 'home';
+    if (_tabController.index == 2) return 'away';
+    return 'neutral';
+  }
+
   void _sendMessage(
     String sender,
     String text, {
@@ -485,6 +536,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     bool isPredictionCard = false,
     bool isGoal = false,
     String? storeAsset,
+    String roomType = 'neutral',
   }) {
     if (text.trim().isEmpty && !isPredictionCard) return;
 
@@ -497,7 +549,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
       if (sendAsCapo) {
         setState(() => _capoMessagesLeft--);
       }
-      SocketClient().sendMessage(widget.matchId, text, isCapo: sendAsCapo);
+      SocketClient().sendMessage(widget.matchId, text, isCapo: sendAsCapo, roomType: roomType);
     } else {
       // Local fallbacks or prediction cards
       String? asset = storeAsset;
@@ -506,13 +558,13 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
         asset = asset.replaceAll('kirmizi_kart.png', 'kart.png');
         asset = asset.replaceAll('cekirdek.png', 'cekirdek.gif');
       }
-      
+
       setState(() {
         _messages.add({
           'sender': sender,
           'isBot': isSystem,
           'message': text,
-          'team': isSystem ? 'system' : 'home',
+          'team': isSystem ? 'system' : roomType,
           'isCapo': isCapo,
           'isTeaGift': isTeaGift,
           'isPredictionCard': isPredictionCard,
@@ -540,8 +592,8 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
   @override
   Widget build(BuildContext context) {
     Color activeColor = teaBronze;
-    if (_tabController.index == 0) activeColor = Colors.red.shade700;
-    if (_tabController.index == 2) activeColor = Colors.orange.shade800;
+    if (_tabController.index == 0) activeColor = _homeColor;
+    if (_tabController.index == 2) activeColor = _awayColor;
 
     return Scaffold(
       backgroundColor: surfaceColor,
@@ -565,14 +617,19 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                widget.homeLogo != null 
-                    ? ClubLogo(clubSlug: null, logoUrl: widget.homeLogo, width: 20, height: 20)
-                    : const CircleAvatar(
+                widget.homeLogo != null
+                    ? ClubLogo(
+                        clubSlug: ClubLogo.getSlugFromName(widget.homeTeam),
+                        logoUrl: widget.homeLogo,
+                        width: 20,
+                        height: 20,
+                      )
+                    : CircleAvatar(
                         radius: 10,
                         backgroundColor: Colors.white,
                         child: Text(
-                          'Ç',
-                          style: TextStyle(
+                          widget.homeTeam.substring(0, min(2, widget.homeTeam.length)).toUpperCase(),
+                          style: const TextStyle(
                             fontSize: 10,
                             color: Colors.black,
                             fontWeight: FontWeight.bold,
@@ -580,42 +637,53 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                         ),
                       ),
                 const SizedBox(width: 6),
-                Text(
-                  widget.homeTeam,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                Flexible(
+                  child: Text(
+                    widget.homeTeam,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12.0),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
                   child: Text(
-                    '0 - 0',
-                    style: TextStyle(
+                    '${widget.homeScore} - ${widget.awayScore}',
+                    style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                       color: teaBronze,
                     ),
                   ),
                 ),
-                Text(
-                  widget.awayTeam,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                Flexible(
+                  child: Text(
+                    widget.awayTeam,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
-                widget.awayLogo != null 
-                    ? ClubLogo(clubSlug: null, logoUrl: widget.awayLogo, width: 20, height: 20)
-                    : const CircleAvatar(
+                widget.awayLogo != null
+                    ? ClubLogo(
+                        clubSlug: ClubLogo.getSlugFromName(widget.awayTeam),
+                        logoUrl: widget.awayLogo,
+                        width: 20,
+                        height: 20,
+                      )
+                    : CircleAvatar(
                         radius: 10,
                         backgroundColor: Colors.white,
                         child: Text(
-                          'GS',
-                          style: TextStyle(
+                          widget.awayTeam.substring(0, min(2, widget.awayTeam.length)).toUpperCase(),
+                          style: const TextStyle(
                             fontSize: 10,
                             color: Colors.black,
                             fontWeight: FontWeight.bold,
@@ -625,32 +693,33 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
               ],
             ),
             const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.redAccent,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.fiber_manual_record,
-                    color: Colors.white,
-                    size: 10,
-                  ),
-                  SizedBox(width: 4),
-                  Text(
-                    "12'",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+            if (widget.minute != null || widget.status != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.fiber_manual_record,
                       color: Colors.white,
+                      size: 10,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 4),
+                    Text(
+                      widget.minute != null ? "${widget.minute}'" : "${widget.status}",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
         centerTitle: true,
@@ -767,7 +836,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     DecorationImage? subtleTexture;
 
     if (roomType == 'home') {
-      bgColor = Colors.red.withValues(
+      bgColor = _homeColor.withValues(
         alpha: 0.92,
       ); // 92% opacity to let 8% of the stadium bleed through as a subtle texture
       watermark = Icon(
@@ -780,7 +849,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
         fit: BoxFit.cover,
       );
     } else if (roomType == 'away') {
-      bgColor = Colors.orange.withValues(alpha: 0.92);
+      bgColor = _awayColor.withValues(alpha: 0.92);
       watermark = Icon(
         Icons.security,
         size: 250,
@@ -798,21 +867,26 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
         children: [
           if (subtleTexture != null) Container(color: bgColor),
           if (watermark != null) Center(child: watermark),
-          ListView.builder(
-            physics: const ClampingScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            itemCount: _messages.length,
-            itemBuilder: (context, index) {
-              final msg = _messages[index];
-              return _buildMessageBubble(msg, roomType);
-            },
+          Builder(
+            builder: (context) {
+              final filtered = _messages.where((m) => m['team'] == roomType || m['team'] == 'system').toList();
+              return ListView.builder(
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final msg = filtered[index];
+                  return _buildMessageBubble(msg, roomType);
+                },
+              );
+            }
           ),
         ],
       ),
     );
   }
 
-    Widget _buildPollWidget(Map<String, dynamic> pollData) {
+  Widget _buildPollWidget(Map<String, dynamic> pollData) {
     final String pollId = pollData['id'] ?? '';
     final String question = pollData['question'] ?? 'Anket';
     final List options = pollData['options'] ?? [];
@@ -861,10 +935,16 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                 ),
               ),
               const Spacer(),
-              Icon(Icons.timer_outlined, color: isExpired ? Colors.redAccent : Colors.white70, size: 14),
+              Icon(
+                Icons.timer_outlined,
+                color: isExpired ? Colors.redAccent : Colors.white70,
+                size: 14,
+              ),
               const SizedBox(width: 4),
               Text(
-                isExpired ? 'Bitti' : '${(remaining.inMinutes).toString().padLeft(2, '0')}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}',
+                isExpired
+                    ? 'Bitti'
+                    : '${(remaining.inMinutes).toString().padLeft(2, '0')}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -892,12 +972,16 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
 
             return GestureDetector(
               onTap: () {
-                  if (!hasVoted) {
-                    setState(() {
-                      _myVotedPolls.add(pollId);
-                    });
-                    SocketClient().submitPollVote(widget.matchId, pollId, opt['id']);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                if (!hasVoted) {
+                  setState(() {
+                    _myVotedPolls.add(pollId);
+                  });
+                  SocketClient().submitPollVote(
+                    widget.matchId,
+                    pollId,
+                    opt['id'],
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('"$text" seçeneğine oy verdiniz!'),
                       backgroundColor: turfGreen,
@@ -993,8 +1077,8 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     }
 
     Color borderColor = Colors.grey;
-    if (team == 'home') borderColor = Colors.red; // Çorum mock color
-    if (team == 'away') borderColor = Colors.orange; // GS mock color
+    if (team == 'home') borderColor = _homeColor;
+    if (team == 'away') borderColor = _awayColor;
 
     if (isBot) {
       final bool isPoll = msg['isPoll'] ?? false;
@@ -1085,8 +1169,8 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     }
 
     Color activeTeamColor = Colors.grey;
-    if (currentRoom == 'home') activeTeamColor = Colors.red.shade700;
-    if (currentRoom == 'away') activeTeamColor = Colors.orange.shade800;
+    if (currentRoom == 'home') activeTeamColor = _homeColor;
+    if (currentRoom == 'away') activeTeamColor = _awayColor;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -1241,6 +1325,32 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
   }
 
   Widget _buildMessageInput(Color activeColor) {
+    final authState = context.read<AuthCubit>().state;
+    String? favClubId;
+    if (authState is AuthSuccess) {
+      favClubId = authState.user['favoriteClubId'];
+    }
+    
+    // Find club IDs from SuperligCubit standings by name
+    final superligState = context.read<SuperligCubit>().state;
+    String? homeTeamId;
+    String? awayTeamId;
+    if (superligState is SuperligLoaded) {
+      try {
+        homeTeamId = superligState.standings.firstWhere((s) => s.clubName.toLowerCase() == widget.homeTeam.toLowerCase()).clubId;
+      } catch (_) {}
+      try {
+        awayTeamId = superligState.standings.firstWhere((s) => s.clubName.toLowerCase() == widget.awayTeam.toLowerCase()).clubId;
+      } catch (_) {}
+    }
+
+    bool canWrite = true;
+    if (_tabController.index == 0 && favClubId != homeTeamId) {
+      canWrite = false;
+    } else if (_tabController.index == 2 && favClubId != awayTeamId) {
+      canWrite = false;
+    }
+
     Color iconColor = activeColor.computeLuminance() > 0.5
         ? Colors.black87
         : Colors.white;
@@ -1272,25 +1382,26 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
-                  const SizedBox(height: 2),
-                  BlocBuilder<EconomyCubit, EconomyState>(
-                    builder: (context, state) {
-                      return Text(
-                        '${state.balance} ☕',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: teaBronze,
-                        ),
-                      );
-                    },
-                  ),
+                const SizedBox(height: 2),
+                BlocBuilder<EconomyCubit, EconomyState>(
+                  builder: (context, state) {
+                    return Text(
+                      '${state.balance} ☕',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: teaBronze,
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
             const SizedBox(width: 8),
             Expanded(
               child: TextField(
                 controller: _messageController,
+                enabled: canWrite,
                 style: _capoMessagesLeft > 0
                     ? const TextStyle(
                         fontWeight: FontWeight.bold,
@@ -1298,9 +1409,11 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       )
                     : null,
                 decoration: InputDecoration(
-                  hintText: _capoMessagesLeft > 0
-                      ? '📢 Amigo Modu ($_capoMessagesLeft)'
-                      : 'Mesaj yaz...',
+                  hintText: !canWrite 
+                      ? 'Sadece taraftarlar yazabilir'
+                      : (_capoMessagesLeft > 0
+                          ? '📢 Amigo Modu ($_capoMessagesLeft)'
+                          : 'Mesaj yaz...'),
                   hintStyle: _capoMessagesLeft > 0
                       ? const TextStyle(color: teaBronze)
                       : null,
@@ -1324,15 +1437,16 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
               backgroundColor: activeColor,
               child: IconButton(
                 icon: Icon(Icons.send, color: iconColor, size: 20),
-                onPressed: () {
+                onPressed: canWrite ? () {
                   final txt = _messageController.text;
                   if (txt.isEmpty) return;
                   bool isCapo = _capoMessagesLeft > 0;
-                  _sendMessage('Ben', txt, isCapo: isCapo);
+                  String rType = _getCurrentRoomType();
+                  _sendMessage('Ben', txt, isCapo: isCapo, roomType: rType);
                   if (isCapo) {
                     setState(() => _capoMessagesLeft--);
                   }
-                },
+                } : null,
               ),
             ),
           ],
@@ -1341,6 +1455,3 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     );
   }
 }
-
-
-

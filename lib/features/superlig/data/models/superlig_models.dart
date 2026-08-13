@@ -8,6 +8,7 @@ class StandingsEntry {
   final int goalsAgainst;
   final int goalDiff;
   final int points;
+  final String clubId;
   final String clubName;
   final String? clubLogoUrl;
   final String? clubSlug;
@@ -26,6 +27,7 @@ class StandingsEntry {
     required this.goalsAgainst,
     required this.goalDiff,
     required this.points,
+    required this.clubId,
     required this.clubName,
     this.clubLogoUrl,
     this.clubSlug,
@@ -46,6 +48,7 @@ class StandingsEntry {
       goalsAgainst: json['goalsAgainst'],
       goalDiff: json['goalDiff'],
       points: json['points'],
+      clubId: json['club']?['id'] ?? '',
       clubName: json['club']?['name'] ?? 'Bilinmiyor',
       clubLogoUrl: json['club']?['logoUrl'],
       clubSlug: json['club']?['slug'],

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/match_detail_cubit.dart';
 import '../cubit/match_detail_state.dart';
 import '../../superlig/data/models/superlig_models.dart';
+import '../../../core/widgets/club_logo.dart';
 
 
 const Color turfGreen = Color(0xFF1B5E20);
@@ -96,7 +97,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen>
           } else if (event['time'] != null) {
             if (event['time']['currentPeriodStartTimestamp'] != null) {
               matchMinute = ((DateTime.now().millisecondsSinceEpoch / 1000 - event['time']['currentPeriodStartTimestamp']) / 60).floor();
-              if (event['status'] != null && event['status']['description'] == '2nd half') matchMinute = (matchMinute ?? 0) + 45;
+              if (event['status'] != null && event['status']['description'] == '2nd half') matchMinute = matchMinute + 45;
               if (event['status'] != null && event['status']['description'] == 'Halftime') matchMinute = 45;
             } else if (event['time']['played'] != null) {
               matchMinute = event['time']['played'];
@@ -125,12 +126,11 @@ class _MatchDetailScreenState extends State<MatchDetailScreen>
               Expanded(
                 child: Column(
                   children: [
-                    Image.network(
-                      widget.match.homeLogo,
+                    ClubLogo(
+                      clubSlug: ClubLogo.getSlugFromName(widget.match.homeTeam),
+                      logoUrl: widget.match.homeLogo,
                       width: 64,
                       height: 64,
-                      errorBuilder: (c, e, s) =>
-                          const Icon(Icons.shield, color: Colors.white, size: 48),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -181,12 +181,11 @@ class _MatchDetailScreenState extends State<MatchDetailScreen>
               Expanded(
                 child: Column(
                   children: [
-                    Image.network(
-                      widget.match.awayLogo,
+                    ClubLogo(
+                      clubSlug: ClubLogo.getSlugFromName(widget.match.awayTeam),
+                      logoUrl: widget.match.awayLogo,
                       width: 64,
                       height: 64,
-                      errorBuilder: (c, e, s) =>
-                          const Icon(Icons.shield, color: Colors.white, size: 48),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -477,7 +476,12 @@ class _MatchDetailScreenState extends State<MatchDetailScreen>
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Image.network(widget.match.homeLogo, width: 24, height: 24, errorBuilder: (c, e, s) => const Icon(Icons.shield, size: 16)),
+                                  ClubLogo(
+                                    clubSlug: ClubLogo.getSlugFromName(widget.match.homeTeam),
+                                    logoUrl: widget.match.homeLogo,
+                                    width: 24,
+                                    height: 24,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(child: Text(widget.match.homeTeam, overflow: TextOverflow.ellipsis)),
                                 ],
@@ -487,7 +491,12 @@ class _MatchDetailScreenState extends State<MatchDetailScreen>
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Image.network(widget.match.awayLogo, width: 24, height: 24, errorBuilder: (c, e, s) => const Icon(Icons.shield, size: 16)),
+                                  ClubLogo(
+                                    clubSlug: ClubLogo.getSlugFromName(widget.match.awayTeam),
+                                    logoUrl: widget.match.awayLogo,
+                                    width: 24,
+                                    height: 24,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(child: Text(widget.match.awayTeam, overflow: TextOverflow.ellipsis)),
                                 ],

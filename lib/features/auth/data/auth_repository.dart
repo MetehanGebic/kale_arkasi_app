@@ -127,11 +127,7 @@ class AuthRepository {
     try {
       final response = await _dio.post(
         '$_baseUrl/reset-password',
-        data: {
-          'email': email,
-          'code': code,
-          'password': newPassword,
-        },
+        data: {'email': email, 'code': code, 'password': newPassword},
       );
       if (response.statusCode == 200) {
         return response.data['message'] ?? 'Şifre başarıyla güncellendi.';
@@ -157,7 +153,7 @@ class AuthRepository {
   Future<Map<String, dynamic>> getUserProfile(String token) async {
     try {
       final response = await _dio.get(
-        '${ApiConstants.baseUrl}/user/me',
+        '${ApiConstants.baseUrl}/api/user/me',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -175,11 +171,14 @@ class AuthRepository {
   Future<String> uploadAvatar(String token, String filePath) async {
     try {
       final formData = FormData.fromMap({
-        'avatar': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+        'avatar': await MultipartFile.fromFile(
+          filePath,
+          filename: filePath.split('/').last,
+        ),
       });
 
       final response = await _dio.post(
-        '${ApiConstants.baseUrl}/user/avatar',
+        '${ApiConstants.baseUrl}/api/user/avatar',
         data: formData,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
