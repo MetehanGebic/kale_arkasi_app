@@ -54,6 +54,20 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
     context.read<AdminCubit>().removeTrackedMatch(id);
   }
 
+  Widget _buildSyncButton(BuildContext context, String label, String target) {
+    return ActionChip(
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: turfGreen)),
+      onPressed: () {
+        context.read<AdminCubit>().triggerScraper(target);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$label tetiklendi.'), duration: const Duration(seconds: 2), backgroundColor: turfGreen),
+        );
+      },
+      backgroundColor: Colors.white,
+      side: const BorderSide(color: turfGreen),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,6 +97,24 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const Text(
+                  'Veri Senkronizasyonu (Manuel)',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: turfGreen),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildSyncButton(context, 'Puan Durumu', 'standings'),
+                    _buildSyncButton(context, 'Fikstür', 'fixtures'),
+                    _buildSyncButton(context, 'Gol Krallığı', 'topscorers'),
+                    _buildSyncButton(context, 'Transferler', 'transfers'),
+                    _buildSyncButton(context, 'Kadrolar', 'squads'),
+                    _buildSyncButton(context, 'Günün Maçları', 'live-matches'),
+                  ],
+                ),
+                const SizedBox(height: 32),
                 const Text(
                   'SofaScore Canlı Maç Ekle',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: turfGreen),

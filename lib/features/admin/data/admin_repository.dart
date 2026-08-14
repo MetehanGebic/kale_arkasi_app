@@ -38,5 +38,12 @@ class AdminRepository {
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
   }
+
+  Future<void> triggerScraper(String token, String target) async {
+    await _dio.post(
+      '$baseUrl/api/admin/trigger/$target',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
 }
 

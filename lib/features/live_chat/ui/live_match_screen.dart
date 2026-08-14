@@ -23,6 +23,8 @@ class LiveMatchScreen extends StatefulWidget {
   final String awayTeam;
   final String? homeLogo;
   final String? awayLogo;
+  final String? homeclubPrimaryColorHex;
+  final String? awayclubPrimaryColorHex;
   final int homeScore;
   final int awayScore;
   final int? minute;
@@ -35,6 +37,8 @@ class LiveMatchScreen extends StatefulWidget {
     required this.awayTeam,
     this.homeLogo,
     this.awayLogo,
+    this.homeclubPrimaryColorHex,
+    this.awayclubPrimaryColorHex,
     this.homeScore = 0,
     this.awayScore = 0,
     this.minute,
@@ -74,24 +78,41 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
   // Live Data for messages
   final List<Map<String, dynamic>> _messages = [];
 
-  Color _homeColor = Colors.red.shade700;
-  Color _awayColor = Colors.orange.shade800;
+  Color _homeColor = Colors.grey;
+  Color _awayColor = Colors.grey;
 
   void _resolveTeamColors() {
-    final state = context.read<SuperligCubit>().state;
-    if (state is SuperligLoaded) {
-      try {
-        final homeClub = state.standings.firstWhere((s) => s.clubName.toLowerCase() == widget.homeTeam.toLowerCase());
-        if (homeClub.clubPrimaryColor != null) {
-          _homeColor = _parseColor(homeClub.clubPrimaryColor!);
-        }
-      } catch (_) {}
-      try {
-        final awayClub = state.standings.firstWhere((s) => s.clubName.toLowerCase() == widget.awayTeam.toLowerCase());
-        if (awayClub.clubPrimaryColor != null) {
-          _awayColor = _parseColor(awayClub.clubPrimaryColor!);
-        }
-      } catch (_) {}
+    if (widget.homeclubPrimaryColorHex != null) {
+      _homeColor = _parseColor(widget.homeclubPrimaryColorHex!);
+    } else {
+      // Try resolving from standings as a fallback
+      final state = context.read<SuperligCubit>().state;
+      if (state is SuperligLoaded) {
+        try {
+          final homeClub = state.standings.firstWhere(
+            (s) => s.clubName.toLowerCase().contains(widget.homeTeam.toLowerCase()),
+          );
+          if (homeClub.clubPrimaryColor != null) {
+            _homeColor = _parseColor(homeClub.clubPrimaryColor!);
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (widget.awayclubPrimaryColorHex != null) {
+      _awayColor = _parseColor(widget.awayclubPrimaryColorHex!);
+    } else {
+      final state = context.read<SuperligCubit>().state;
+      if (state is SuperligLoaded) {
+        try {
+          final awayClub = state.standings.firstWhere(
+            (s) => s.clubName.toLowerCase().contains(widget.awayTeam.toLowerCase()),
+          );
+          if (awayClub.clubPrimaryColor != null) {
+            _awayColor = _parseColor(awayClub.clubPrimaryColor!);
+          }
+        } catch (_) {}
+      }
     }
   }
 
@@ -151,7 +172,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
             'sender': data['sender'],
             'isBot': data['isSystem'] ?? false,
             'message': data['text'],
-            'team': data['isSystem'] == true ? 'system' : (data['team'] ?? 'neutral'),
+            'team': data['isSystem'] == true
+                ? 'system'
+                : (data['team'] ?? 'neutral'),
             'isCapo': data['isCapo'] ?? false,
             'isTeaGift': false,
             'isPredictionCard': false,
@@ -296,7 +319,11 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/cay.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'cay', roomType: _getCurrentRoomType());
+                        SocketClient().buyAddon(
+                          widget.matchId,
+                          'cay',
+                          roomType: _getCurrentRoomType(),
+                        );
                       },
                     ),
                     _buildStoreItem(
@@ -306,7 +333,11 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/capo.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'capo', roomType: _getCurrentRoomType());
+                        SocketClient().buyAddon(
+                          widget.matchId,
+                          'capo',
+                          roomType: _getCurrentRoomType(),
+                        );
                       },
                     ),
                     _buildStoreItem(
@@ -316,7 +347,11 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/madde.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'madde', roomType: _getCurrentRoomType());
+                        SocketClient().buyAddon(
+                          widget.matchId,
+                          'madde',
+                          roomType: _getCurrentRoomType(),
+                        );
                       },
                     ),
                     _buildStoreItem(
@@ -326,7 +361,11 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/mesale.gif',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'mesale', roomType: _getCurrentRoomType());
+                        SocketClient().buyAddon(
+                          widget.matchId,
+                          'mesale',
+                          roomType: _getCurrentRoomType(),
+                        );
                       },
                     ),
                     _buildStoreItem(
@@ -336,7 +375,11 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/cekirdek.gif',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'cekirdek', roomType: _getCurrentRoomType());
+                        SocketClient().buyAddon(
+                          widget.matchId,
+                          'cekirdek',
+                          roomType: _getCurrentRoomType(),
+                        );
                       },
                     ),
                     _buildStoreItem(
@@ -346,7 +389,11 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/davul.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'davul', roomType: _getCurrentRoomType());
+                        SocketClient().buyAddon(
+                          widget.matchId,
+                          'davul',
+                          roomType: _getCurrentRoomType(),
+                        );
                       },
                     ),
                     _buildStoreItem(
@@ -366,7 +413,11 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/gozluk.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'gozluk', roomType: _getCurrentRoomType());
+                        SocketClient().buyAddon(
+                          widget.matchId,
+                          'gozluk',
+                          roomType: _getCurrentRoomType(),
+                        );
                       },
                     ),
                     _buildStoreItem(
@@ -376,7 +427,11 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       'assets/images/store/kufur.png',
                       () {
                         Navigator.pop(context);
-                        SocketClient().buyAddon(widget.matchId, 'kufur', roomType: _getCurrentRoomType());
+                        SocketClient().buyAddon(
+                          widget.matchId,
+                          'kufur',
+                          roomType: _getCurrentRoomType(),
+                        );
                       },
                     ),
                   ],
@@ -549,7 +604,12 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
       if (sendAsCapo) {
         setState(() => _capoMessagesLeft--);
       }
-      SocketClient().sendMessage(widget.matchId, text, isCapo: sendAsCapo, roomType: roomType);
+      SocketClient().sendMessage(
+        widget.matchId,
+        text,
+        isCapo: sendAsCapo,
+        roomType: roomType,
+      );
     } else {
       // Local fallbacks or prediction cards
       String? asset = storeAsset;
@@ -628,7 +688,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                         radius: 10,
                         backgroundColor: Colors.white,
                         child: Text(
-                          widget.homeTeam.substring(0, min(2, widget.homeTeam.length)).toUpperCase(),
+                          widget.homeTeam
+                              .substring(0, min(2, widget.homeTeam.length))
+                              .toUpperCase(),
                           style: const TextStyle(
                             fontSize: 10,
                             color: Colors.black,
@@ -682,7 +744,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                         radius: 10,
                         backgroundColor: Colors.white,
                         child: Text(
-                          widget.awayTeam.substring(0, min(2, widget.awayTeam.length)).toUpperCase(),
+                          widget.awayTeam
+                              .substring(0, min(2, widget.awayTeam.length))
+                              .toUpperCase(),
                           style: const TextStyle(
                             fontSize: 10,
                             color: Colors.black,
@@ -710,7 +774,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      widget.minute != null ? "${widget.minute}'" : "${widget.status}",
+                      widget.minute != null
+                          ? "${widget.minute}'"
+                          : "${widget.status}",
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -839,10 +905,14 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
       bgColor = _homeColor.withValues(
         alpha: 0.92,
       ); // 92% opacity to let 8% of the stadium bleed through as a subtle texture
-      watermark = Icon(
-        Icons.shield,
-        size: 250,
-        color: Colors.white.withValues(alpha: 0.15),
+      watermark = Opacity(
+        opacity: 0.15,
+        child: ClubLogo(
+          clubSlug: ClubLogo.getSlugFromName(widget.homeTeam),
+          logoUrl: widget.homeLogo,
+          width: 250,
+          height: 250,
+        ),
       );
       subtleTexture = const DecorationImage(
         image: AssetImage('assets/images/stadium_bg.jpg'),
@@ -850,10 +920,14 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
       );
     } else if (roomType == 'away') {
       bgColor = _awayColor.withValues(alpha: 0.92);
-      watermark = Icon(
-        Icons.security,
-        size: 250,
-        color: Colors.white.withValues(alpha: 0.15),
+      watermark = Opacity(
+        opacity: 0.15,
+        child: ClubLogo(
+          clubSlug: ClubLogo.getSlugFromName(widget.awayTeam),
+          logoUrl: widget.awayLogo,
+          width: 250,
+          height: 250,
+        ),
       );
       subtleTexture = const DecorationImage(
         image: AssetImage('assets/images/stadium_bg.jpg'),
@@ -869,7 +943,9 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
           if (watermark != null) Center(child: watermark),
           Builder(
             builder: (context) {
-              final filtered = _messages.where((m) => m['team'] == roomType || m['team'] == 'system').toList();
+              final filtered = _messages
+                  .where((m) => m['team'] == roomType || m['team'] == 'system')
+                  .toList();
               return ListView.builder(
                 physics: const ClampingScrollPhysics(),
                 padding: const EdgeInsets.all(16),
@@ -879,7 +955,7 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                   return _buildMessageBubble(msg, roomType);
                 },
               );
-            }
+            },
           ),
         ],
       ),
@@ -1330,17 +1406,25 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
     if (authState is AuthSuccess) {
       favClubId = authState.user['favoriteClubId'];
     }
-    
+
     // Find club IDs from SuperligCubit standings by name
     final superligState = context.read<SuperligCubit>().state;
     String? homeTeamId;
     String? awayTeamId;
     if (superligState is SuperligLoaded) {
       try {
-        homeTeamId = superligState.standings.firstWhere((s) => s.clubName.toLowerCase() == widget.homeTeam.toLowerCase()).clubId;
+        homeTeamId = superligState.standings
+            .firstWhere(
+              (s) => s.clubName.toLowerCase() == widget.homeTeam.toLowerCase(),
+            )
+            .clubId;
       } catch (_) {}
       try {
-        awayTeamId = superligState.standings.firstWhere((s) => s.clubName.toLowerCase() == widget.awayTeam.toLowerCase()).clubId;
+        awayTeamId = superligState.standings
+            .firstWhere(
+              (s) => s.clubName.toLowerCase() == widget.awayTeam.toLowerCase(),
+            )
+            .clubId;
       } catch (_) {}
     }
 
@@ -1409,11 +1493,11 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
                       )
                     : null,
                 decoration: InputDecoration(
-                  hintText: !canWrite 
+                  hintText: !canWrite
                       ? 'Sadece taraftarlar yazabilir'
                       : (_capoMessagesLeft > 0
-                          ? '📢 Amigo Modu ($_capoMessagesLeft)'
-                          : 'Mesaj yaz...'),
+                            ? '📢 Amigo Modu ($_capoMessagesLeft)'
+                            : 'Mesaj yaz...'),
                   hintStyle: _capoMessagesLeft > 0
                       ? const TextStyle(color: teaBronze)
                       : null,
@@ -1437,16 +1521,23 @@ class _LiveMatchScreenState extends State<LiveMatchScreen>
               backgroundColor: activeColor,
               child: IconButton(
                 icon: Icon(Icons.send, color: iconColor, size: 20),
-                onPressed: canWrite ? () {
-                  final txt = _messageController.text;
-                  if (txt.isEmpty) return;
-                  bool isCapo = _capoMessagesLeft > 0;
-                  String rType = _getCurrentRoomType();
-                  _sendMessage('Ben', txt, isCapo: isCapo, roomType: rType);
-                  if (isCapo) {
-                    setState(() => _capoMessagesLeft--);
-                  }
-                } : null,
+                onPressed: canWrite
+                    ? () {
+                        final txt = _messageController.text;
+                        if (txt.isEmpty) return;
+                        bool isCapo = _capoMessagesLeft > 0;
+                        String rType = _getCurrentRoomType();
+                        _sendMessage(
+                          'Ben',
+                          txt,
+                          isCapo: isCapo,
+                          roomType: rType,
+                        );
+                        if (isCapo) {
+                          setState(() => _capoMessagesLeft--);
+                        }
+                      }
+                    : null,
               ),
             ),
           ],

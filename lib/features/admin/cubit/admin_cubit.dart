@@ -47,4 +47,15 @@ class AdminCubit extends Cubit<AdminState> {
       await fetchTrackedMatches();
     }
   }
+
+  Future<void> triggerScraper(String target) async {
+    try {
+      // We don't change state to loading so we don't clear the matches list.
+      // But we could emit a success/error message if we had a way to show Toast.
+      // For now, just fire the API request.
+      await _repository.triggerScraper(_token, target);
+    } catch (e) {
+      // Ignore or log error
+    }
+  }
 }
