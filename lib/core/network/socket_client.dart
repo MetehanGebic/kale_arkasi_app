@@ -47,13 +47,9 @@ class SocketClient {
     }
   }
 
-  void votePoll(String pollId, int optionIndex) {
-    if (socket.connected) {
-      socket.emit('vote_poll', {
-        'pollId': pollId,
-        'optionIndex': optionIndex,
-      });
-    }
+  @Deprecated('Use submitPollVote instead. Backend expects matchId and optionId.')
+  void votePoll(String matchId, String pollId, String optionId) {
+    submitPollVote(matchId, pollId, optionId);
   }
 
   void leaveMatch(String matchId) {

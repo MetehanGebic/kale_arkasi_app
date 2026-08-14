@@ -45,5 +45,21 @@ class AdminRepository {
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
   }
+
+  Future<List<Map<String, dynamic>>> getUsers(String token) async {
+    final response = await _dio.get(
+      '$baseUrl/api/admin/users',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+    return List<Map<String, dynamic>>.from(response.data['data']);
+  }
+
+  Future<void> changeUserStatus(String token, String userId, String status) async {
+    await _dio.put(
+      '$baseUrl/api/admin/users/$userId/status',
+      data: {'status': status},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
 }
 

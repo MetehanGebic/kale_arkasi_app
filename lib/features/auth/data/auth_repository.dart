@@ -157,7 +157,7 @@ class AuthRepository {
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       if (response.statusCode == 200 && response.data['success'] == true) {
-        return response.data['user'];
+        return response.data['data'];
       }
       throw Exception('Kullanıcı bilgileri alınamadı.');
     } on DioException catch (e) {
@@ -183,7 +183,7 @@ class AuthRepository {
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       if (response.statusCode == 200 && response.data['success'] == true) {
-        return response.data['avatarUrl'];
+        return response.data['data'];
       }
       throw Exception('Fotoğraf yüklenemedi.');
     } on DioException catch (e) {
